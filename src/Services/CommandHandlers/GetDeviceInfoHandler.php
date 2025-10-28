@@ -15,16 +15,16 @@ class GetDeviceInfoHandler extends BaseCommandHandler
     {
         $serialNum = $this->getDeviceSerial($data);
 
-        if (! $serialNum) {
+        if ( ! $serialNum) {
             return null;
         }
 
         // تبدیل به DTO
         $deviceInfoDTO = $this->mapper->mapToDeviceInfoDTO($data);
 
-        $this->log('Device info received', [
-            'model' => $deviceInfoDTO->modelName,
-            'firmware' => $deviceInfoDTO->firmwareVersion,
+        $this->log('GetDeviceInfoHandler:Device info received', [
+            'pure'   => $data,
+            'mapped' => $deviceInfoDTO->toArray(),
         ]);
 
         // بروزرسانی خودکار وضعیت دستور در دیتابیس

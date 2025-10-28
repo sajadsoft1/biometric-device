@@ -22,10 +22,10 @@ class AddUserDTO
     public function toArray(): array
     {
         return [
-            'employee_id' => $this->employeeId,
-            'name' => $this->name,
+            'employee_id'    => $this->employeeId,
+            'name'           => $this->name,
             'biometric_type' => $this->biometricType->value,
-            'is_admin' => $this->isAdmin,
+            'is_admin'       => $this->isAdmin,
         ];
     }
 }

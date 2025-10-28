@@ -31,8 +31,10 @@ class SendQrCodeHandler extends BaseCommandHandler
     {
         $serialNum = $this->getDeviceSerial($data);
 
-        if (! $serialNum) {
-            $this->log('QR code from unregistered device');
+        if ( ! $serialNum) {
+            $this->log('SendQrCodeHandler:QR code from unregistered device', [
+                'pure' => $data,
+            ]);
 
             return $this->buildResponse('sendqrcode', false);
         }
@@ -40,8 +42,10 @@ class SendQrCodeHandler extends BaseCommandHandler
         // استخراج محتوای QR code
         $qrCodeContent = $data['qrcode'] ?? $data['qr'] ?? null;
 
-        if (! $qrCodeContent) {
-            $this->log('Empty QR code received');
+        if ( ! $qrCodeContent) {
+            $this->log('SendQrCodeHandler:Empty QR code received', [
+                'pure' => $data,
+            ]);
 
             return $this->buildResponse('sendqrcode', false);
         }
@@ -55,10 +59,9 @@ class SendQrCodeHandler extends BaseCommandHandler
             rawData: $data
         );
 
-        $this->log('QR code scanned', [
-            'device' => $serialNum,
-            'qr_length' => strlen($qrCodeContent),
-            'employee_id' => $qrCodeDTO->employeeId,
+        $this->log('SendQrCodeHandler:QR code scanned', [
+            'pure'   => $data,
+            'mapped' => $qrCodeDTO->toArray(),
         ]);
 
         // پخش Event
@@ -76,14 +79,17 @@ class SendQrCodeHandler extends BaseCommandHandler
     /** Parse timestamp from device format */
     protected function parseTimestamp(?string $time): Carbon
     {
-        if (! $time) {
+        if ( ! $time) {
             return Carbon::now();
         }
 
         try {
             return Carbon::parse($time);
         } catch (Exception $e) {
-            $this->log('Failed to parse timestamp', ['time' => $time]);
+            $this->log('SendQrCodeHandler:Failed to parse timestamp', [
+                'time'  => $time,
+                'error' => $e->getMessage(),
+            ]);
 
             return Carbon::now();
         }

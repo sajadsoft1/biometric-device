@@ -20,7 +20,6 @@ readonly class AttendanceDTO
         public VerificationMode $verificationType,
         public bool $isCheckIn,
         public string $deviceSerial,
-        public ?string $photoBase64,
         public ?AttendanceEventType $eventType,
         public array $rawData,
     ) {}
@@ -29,16 +28,15 @@ readonly class AttendanceDTO
     public function toArray(): array
     {
         return [
-            'employee_id' => $this->employeeId,
-            'employee_name' => $this->employeeName,
-            'timestamp' => $this->timestamp->toIso8601String(),
+            'employee_id'       => $this->employeeId,
+            'employee_name'     => $this->employeeName,
+            'timestamp'         => $this->timestamp->toIso8601String(),
             'verification_type' => $this->verificationType->value,
-            'is_check_in' => $this->isCheckIn,
-            'device_serial' => $this->deviceSerial,
-            'photo' => $this->photoBase64,
-            'event_type' => $this->eventType?->value,
-            'event_type_label' => $this->eventType?->description(),
-            'row_data' => $this->rawData,
+            'is_check_in'       => $this->isCheckIn,
+            'device_serial'     => $this->deviceSerial,
+            'event_type'        => $this->eventType?->value,
+            'event_type_label'  => $this->eventType?->description(),
+            'row_data'          => $this->rawData,
         ];
     }
 }

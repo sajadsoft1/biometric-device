@@ -12,8 +12,8 @@ interface CommandHandlerInterface
     /**
      * Handle incoming data from device
      *
-     * @param  array  $data  The decoded message data
-     * @param  mixed  $connection  The connection resource (socket, etc.)
+     * @param  array      $data       The decoded message data
+     * @param  mixed      $connection The connection resource (socket, etc.)
      * @return array|null Response to send back to device
      */
     public function handle(array $data, $connection): ?array;

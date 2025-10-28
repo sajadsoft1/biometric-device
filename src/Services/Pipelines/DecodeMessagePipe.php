@@ -17,8 +17,8 @@ class DecodeMessagePipe
 
         // Normalize data
         $context['normalized_data'] = $this->normalize($data);
-        $context['is_request'] = isset($data['cmd']);
-        $context['is_response'] = isset($data['ret']);
+        $context['is_request']      = isset($data['cmd']);
+        $context['is_response']     = isset($data['ret']);
 
         return $next($context);
     }

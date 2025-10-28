@@ -12,11 +12,16 @@ class SetUserInfoHandler extends BaseCommandHandler
     {
         $serialNum = $this->getDeviceSerial($data);
 
-        if (! $serialNum) {
+        if ( ! $serialNum) {
             return null;
         }
 
         $result = $data['result'] ?? false;
+
+        $this->log('SetUserInfoHandler:Set user info response', [
+            'pure'    => $data,
+            'success' => $result,
+        ]);
 
         // بروزرسانی خودکار وضعیت دستور در دیتابیس
         $this->updateCommandStatus($serialNum, 'setuserinfo', $result, $data);

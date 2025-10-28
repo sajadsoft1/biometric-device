@@ -7,17 +7,17 @@ namespace Sajadsoft\BiometricDevices\Enums;
 enum DeviceCommandStatusEnum: string
 {
     case PENDING = 'pending';
-    case SENT = 'sent';
+    case SENT    = 'sent';
     case SUCCESS = 'success';
-    case FAILED = 'failed';
+    case FAILED  = 'failed';
 
     public function title(): string
     {
         return match ($this) {
             self::PENDING => 'PENDING',
-            self::SENT => 'SENT',
+            self::SENT    => 'SENT',
             self::SUCCESS => 'SUCCESS',
-            self::FAILED => 'FAILED',
+            self::FAILED  => 'FAILED',
         };
     }
 
@@ -25,9 +25,9 @@ enum DeviceCommandStatusEnum: string
     {
         return match ($this) {
             self::PENDING => 'gray',
-            self::SENT => 'blue',
+            self::SENT    => 'blue',
             self::SUCCESS => 'green',
-            self::FAILED => 'red',
+            self::FAILED  => 'red',
         };
     }
 
@@ -35,9 +35,9 @@ enum DeviceCommandStatusEnum: string
     {
         return match ($this) {
             self::PENDING => 'در انتظار',
-            self::SENT => 'ارسال شده',
+            self::SENT    => 'ارسال شده',
             self::SUCCESS => 'موفق',
-            self::FAILED => 'ناموفق',
+            self::FAILED  => 'ناموفق',
         };
     }
 

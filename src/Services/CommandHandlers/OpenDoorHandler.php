@@ -15,13 +15,16 @@ class OpenDoorHandler extends BaseCommandHandler
     {
         $serialNum = $this->getDeviceSerial($data);
 
-        if (! $serialNum) {
+        if ( ! $serialNum) {
             return null;
         }
 
         $result = $data['result'] ?? false;
 
-        $this->log($result ? 'Door opened successfully' : 'Door open failed');
+        $this->log('OpenDoorHandler:Door open response', [
+            'pure'    => $data,
+            'success' => $result,
+        ]);
 
         // بروزرسانی خودکار وضعیت دستور در دیتابیس
         $this->updateCommandStatus($serialNum, 'opendoor', $result, $data);

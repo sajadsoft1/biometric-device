@@ -14,7 +14,6 @@ use Sajadsoft\BiometricDevices\DTOs\Responses\DeviceInfoDTO;
 use Sajadsoft\BiometricDevices\DTOs\Responses\EnrollmentDTO;
 use Sajadsoft\BiometricDevices\DTOs\Responses\UserDTO;
 use Sajadsoft\BiometricDevices\Enums\AttendanceEventType;
-use Sajadsoft\BiometricDevices\Support\Logger;
 
 /**
  * Data mapper for AIFace WebSocket protocol devices
@@ -26,24 +25,43 @@ class AIFaceWebSocketMapper extends AbstractDataMapper
     // ============================================
 
     /**
+     * Map device attendance data to AttendanceDTO
+     *
      * @param array{
-     *     cmd:string,
-     *     sn:string,
-     *     count:int,
-     *     logindex:int,
-     *     record: array{
-     *      enrollid: int,
-     *      name: string,
-     *      time: string,
-     *      mode:int,
-     *      inout:int,
-     *      event:int
-     *  }[]
+     *     cmd?: string,
+     *     ret?: string,
+     *     sn?: string,
+     *     count?: int,
+     *     logindex?: int,
+     *     record?: array<array{
+     *         enrollid: int,
+     *         name: string,
+     *         time: string,
+     *         mode: int,
+     *         inout: int,
+     *         event?: int,
+     *     }>,
+     *     enrollid?: int,
+     *     name?: string,
+     *     time?: string,
+     *     mode?: int,
+     *     inout?: int,
+     *     event?: int,
      * } $data
      */
     public function mapToAttendanceDTO(array $data): AttendanceDTO
     {
-        $record   = $data['record'][0] ?? [];
+        // تشخیص نوع ساختار داده:
+        // 1. اگر record آرایه‌ای از رکوردها است (sendlog) -> اولین رکورد را بگیر
+        // 2. اگر خود data یک رکورد است (getalllog - در loop) -> از data استفاده کن
+        $record       = $data;
+        $deviceSerial = $data['sn'] ?? '';
+
+        // اگر record آرایه است و شامل داده است، اولین رکورد را بگیر
+        if (isset($data['record']) && is_array($data['record']) && ! empty($data['record'])) {
+            $record = $data['record'][0];
+        }
+
         $enrollId = $record['enrollid'] ?? 0;
 
         return new AttendanceDTO(
@@ -52,13 +70,36 @@ class AIFaceWebSocketMapper extends AbstractDataMapper
             timestamp: $this->parseTimestamp($record['time'] ?? null),
             verificationType: $this->mapVerificationMode($record['mode'] ?? 0),
             isCheckIn: (int) Arr::get($record, 'inout', 0) === 0,
-            deviceSerial: $data['sn'] ?? '',
-            photoBase64: $record['image'] ?? null,
+            deviceSerial: $deviceSerial,
             eventType: AttendanceEventType::tryFromValue($record['event'] ?? null),
             rawData: $data,
         );
     }
 
+    /**
+     * Map device user data to UserDTO
+     *
+     * @param array{
+     *     cmd?: string,
+     *     ret?: string,
+     *     result?: bool,
+     *     sn: string,
+     *     enrollid: int,
+     *     name: string,
+     *     backupnum?: int,
+     *     admin: int,
+     *     enable: int,
+     *     record?: int|string,
+     *     card?: int,
+     *     pwd?: int,
+     *     shiftid?: int,
+     *     departmant?: string,
+     *     photourl?: string,
+     *     fpflag?: int,
+     *     fpcnt?: int,
+     *     faceflag?: int,
+     * } $data
+     */
     public function mapToUserDTO(array $data): UserDTO
     {
         $enrollId = $data['enrollid'] ?? 0;
@@ -82,6 +123,11 @@ class AIFaceWebSocketMapper extends AbstractDataMapper
             password: isset($data['pwd']) ? (int) $data['pwd'] : null,
             enabled: $enabled,
             shiftId: isset($data['shiftid']) ? (int) $data['shiftid'] : null,
+            department: $data['departmant'] ?? null, // Note: device sends with typo
+            photoUrl: $data['photourl'] ?? null,
+            fingerprintFlag: isset($data['fpflag']) ? (int) $data['fpflag'] : null,
+            fingerprintCount: isset($data['fpcnt']) ? (int) $data['fpcnt'] : null,
+            faceFlag: isset($data['faceflag']) ? (int) $data['faceflag'] : null,
             rawData: $data,
         );
     }
@@ -95,6 +141,10 @@ class AIFaceWebSocketMapper extends AbstractDataMapper
             biometricType: $this->mapBiometricType($data['backupnum'] ?? 0),
             isAdmin: $admin,
             deviceSerial: $data['sn'] ?? '',
+            name: $data['name'] ?? null,
+            fingerprintFlag: isset($data['fpflag']) ? (int) $data['fpflag'] : null,
+            fingerprintCount: isset($data['fpcnt']) ? (int) $data['fpcnt'] : null,
+            faceFlag: isset($data['faceflag']) ? (int) $data['faceflag'] : null,
         );
     }
 
@@ -134,7 +184,6 @@ class AIFaceWebSocketMapper extends AbstractDataMapper
      */
     public function mapToDeviceInfoDTO(array $data): DeviceInfoDTO
     {
-        Logger::debug('Mapping device info to DTO', ['data' => $data]);
         $devInfo = $data['devinfo'] ?? $data;
 
         return new DeviceInfoDTO(

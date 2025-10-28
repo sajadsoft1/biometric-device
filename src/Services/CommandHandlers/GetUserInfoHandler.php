@@ -17,7 +17,7 @@ class GetUserInfoHandler extends BaseCommandHandler
 {
     public function handle(array $data, $connection): ?array
     {
-        if (! isset($data['enrollid'])) {
+        if ( ! isset($data['enrollid'])) {
             return null;
         }
 
@@ -26,9 +26,9 @@ class GetUserInfoHandler extends BaseCommandHandler
         // تبدیل به DTO
         $userDTO = $this->mapper->mapToUserDTO($data);
 
-        $this->log('User info received', [
-            'employee_id' => $userDTO->employeeId,
-            'name' => $userDTO->name,
+        $this->log('GetUserInfoHandler:User info received', [
+            'pure'   => $data,
+            'mapped' => $userDTO->toArray(),
         ]);
 
         // بررسی وجود command مرتبط در دیتابیس

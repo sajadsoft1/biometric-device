@@ -23,7 +23,7 @@ class ValidateMessagePipe
         }
 
         // بررسی cmd یا ret وجود داشته باشد
-        if (! isset($data['cmd']) && ! isset($data['ret'])) {
+        if ( ! isset($data['cmd']) && ! isset($data['ret'])) {
             Logger::debug('Message without cmd or ret field', $context);
 
             return;

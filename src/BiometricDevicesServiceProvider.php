@@ -20,7 +20,7 @@ class BiometricDevicesServiceProvider extends ServiceProvider
     {
         // Merge config
         $this->mergeConfigFrom(
-            __DIR__.'/../config/biometric-devices.php',
+            __DIR__ . '/../config/biometric-devices.php',
             'biometric-devices'
         );
 
@@ -46,16 +46,16 @@ class BiometricDevicesServiceProvider extends ServiceProvider
     {
         // Publish config
         $this->publishes([
-            __DIR__.'/../config/biometric-devices.php' => config_path('biometric-devices.php'),
+            __DIR__ . '/../config/biometric-devices.php' => config_path('biometric-devices.php'),
         ], 'biometric-devices-config');
 
         // Publish migrations
         $this->publishes([
-            __DIR__.'/../database/migrations' => database_path('migrations'),
+            __DIR__ . '/../database/migrations' => database_path('migrations'),
         ], 'biometric-devices-migrations');
 
         // Load migrations (auto-run when migrate command is executed)
-        $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
+        $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
 
         // Register commands
         if ($this->app->runningInConsole()) {

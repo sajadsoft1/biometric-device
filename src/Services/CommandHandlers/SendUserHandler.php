@@ -31,11 +31,11 @@ class SendUserHandler extends BaseCommandHandler
      *  shiftid: int,
      *  sn: string,
      * } $data
-     * @param  mixed  $connection
+     * @param mixed $connection
      */
     public function handle(array $data, $connection): ?array
     {
-        if (! isset($data['enrollid'])) {
+        if ( ! isset($data['enrollid'])) {
             return null;
         }
 
@@ -44,12 +44,6 @@ class SendUserHandler extends BaseCommandHandler
         // تبدیل به DTO
         $userDTO = $this->mapper->mapToUserDTO($data);
 
-        $this->log('User info sent by device', [
-            'employee_id' => $userDTO->employeeId,
-            'name' => $userDTO->name,
-            'device' => $serialNum,
-        ]);
-
         // بررسی وجود command مرتبط در دیتابیس
         $hasCommand = $this->updateCommandStatus($serialNum, 'senduser', true, $data);
 
@@ -57,6 +51,10 @@ class SendUserHandler extends BaseCommandHandler
         // دستگاه به صورت خودکار و دوره‌ای اطلاعات کاربران را می‌فرستد
         // اما ما فقط وقتی نیاز داریم که واقعاً درخواست داده‌ایم
         if ($hasCommand) {
+            $this->log('SendUserHandler:User info sent by device', [
+                'pure'   => $data,
+                'mapped' => $userDTO->toArray(),
+            ]);
             // پخش Event - کاربر مسئول ذخیره
             event(new UserInfoReceived($userDTO));
 

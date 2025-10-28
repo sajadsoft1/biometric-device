@@ -12,25 +12,56 @@ use Sajadsoft\BiometricDevices\Events\CommandResponseReceived;
  */
 class GetAllLogHandler extends BaseCommandHandler
 {
+    /**
+     * Undocumented function
+     *
+     * @param array{
+     * ret?: string,
+     * result?: bool,
+     * sn: string,
+     * count?: int,
+     * from?: int,
+     * to?: int,
+     *  record: array<array{
+     *      enrollid: int,
+     *      name: string,
+     *      time: string,
+     *      mode: int,
+     *      inout: int,
+     *      event: int,
+     *  }>,
+     *  count?: int,
+     *  remaining?: int,
+     * } $data
+     * @param mixed $connection
+     */
     public function handle(array $data, $connection): ?array
     {
         $serialNum = $this->getDeviceSerial($data);
 
-        if (! $serialNum) {
+        if ( ! $serialNum) {
             return null;
         }
 
+        $count = 0;
         // پردازش هر رکورد
         if (isset($data['record']) && is_array($data['record'])) {
             foreach ($data['record'] as $record) {
-                $record['sn'] = $serialNum;
+                $record['sn']  = $serialNum;
                 $attendanceDTO = $this->mapper->mapToAttendanceDTO($record);
                 event(new AttendanceReceived($attendanceDTO));
             }
 
             $count = count($data['record']);
-            $this->log("Attendance logs received: {$count}");
         }
+
+        $remainingCount = $data['count'] ?? 0;
+
+        $this->log('GetAllLogHandler:Attendance logs received', [
+            'pure'      => $data,
+            'count'     => $count,
+            'remaining' => $remainingCount,
+        ]);
 
         // پخش Event برای Command Status
         event(new CommandResponseReceived(

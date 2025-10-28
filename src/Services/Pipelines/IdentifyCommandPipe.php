@@ -21,14 +21,14 @@ class IdentifyCommandPipe
         $commandValue = $data['cmd'] ?? $data['ret'] ?? null;
 
         try {
-            $context['command'] = DeviceCommand::from($commandValue);
+            $context['command']      = DeviceCommand::from($commandValue);
             $context['command_name'] = $commandValue;
         } catch (ValueError $e) {
             Logger::debug('Unknown command type', [
                 'command' => $commandValue,
-                'data' => $data,
+                'data'    => $data,
             ]);
-            $context['command'] = null;
+            $context['command']      = null;
             $context['command_name'] = $commandValue;
         }
 

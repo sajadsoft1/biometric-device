@@ -32,7 +32,7 @@ class MapperFactory
     /** Get mapper for default device configuration */
     public static function createDefault(): DataMapperInterface
     {
-        $driver = config('biometric-devices.default_driver', 'websocket');
+        $driver     = config('biometric-devices.default_driver', 'websocket');
         $deviceType = config('biometric-devices.default_device_type', 'aiface');
 
         return self::create($deviceType, $driver);

@@ -16,16 +16,24 @@ class EnrollmentDTO
         public readonly BiometricType $biometricType,
         public readonly bool $isAdmin,
         public readonly string $deviceSerial,
+        public readonly ?string $name = null,
+        public readonly ?int $fingerprintFlag = null,
+        public readonly ?int $fingerprintCount = null,
+        public readonly ?int $faceFlag = null,
     ) {}
 
     public function toArray(): array
     {
         return [
-            'employee_id' => $this->employeeId,
-            'biometric_type' => $this->biometricType->value,
+            'employee_id'        => $this->employeeId,
+            'name'               => $this->name,
+            'biometric_type'     => $this->biometricType->value,
             'biometric_category' => $this->biometricType->category(),
-            'is_admin' => $this->isAdmin,
-            'device_serial' => $this->deviceSerial,
+            'is_admin'           => $this->isAdmin,
+            'device_serial'      => $this->deviceSerial,
+            'fingerprint_flag'   => $this->fingerprintFlag,
+            'fingerprint_count'  => $this->fingerprintCount,
+            'face_flag'          => $this->faceFlag,
         ];
     }
 }

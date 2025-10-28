@@ -38,7 +38,7 @@ abstract class AbstractDeviceDriver implements DeviceDriverInterface
         $this->console?->info($message);
 
         // لاگ فقط اگر console نداشتیم (مثلاً در background)
-        if (! $this->console) {
+        if ( ! $this->console) {
             Logger::info($message);
         }
     }
@@ -50,7 +50,7 @@ abstract class AbstractDeviceDriver implements DeviceDriverInterface
         $this->console?->warn($message);
 
         // لاگ فقط اگر console نداشتیم یا برای warning ها
-        if (! $this->console) {
+        if ( ! $this->console) {
             Logger::warning($message);
         }
     }
@@ -76,8 +76,8 @@ abstract class AbstractDeviceDriver implements DeviceDriverInterface
     protected function processMessage(array $data, $connection, ?string $deviceSerial = null): ?array
     {
         $context = [
-            'data' => $data,
-            'connection' => $connection,
+            'data'          => $data,
+            'connection'    => $connection,
             'device_serial' => $deviceSerial,
         ];
 
@@ -85,7 +85,7 @@ abstract class AbstractDeviceDriver implements DeviceDriverInterface
         return $this->pipeline->process($context, function ($context) {
             $handler = $context['handler'] ?? null;
 
-            if (! $handler) {
+            if ( ! $handler) {
                 return;
             }
 

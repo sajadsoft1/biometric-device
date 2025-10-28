@@ -12,11 +12,16 @@ class DeleteUserHandler extends BaseCommandHandler
     {
         $serialNum = $this->getDeviceSerial($data);
 
-        if (! $serialNum) {
+        if ( ! $serialNum) {
             return null;
         }
 
         $result = $data['result'] ?? false;
+
+        $this->log('DeleteUserHandler:User deletion response', [
+            'pure'    => $data,
+            'success' => $result,
+        ]);
 
         // بروزرسانی خودکار وضعیت دستور در دیتابیس
         $this->updateCommandStatus($serialNum, 'deleteuser', $result, $data);

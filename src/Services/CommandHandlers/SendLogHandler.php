@@ -14,14 +14,21 @@ class SendLogHandler extends BaseCommandHandler
 {
     public function handle(array $data, $connection): ?array
     {
-        if (! $this->getDeviceSerial($data)) {
-            $this->log('Attendance log from unregistered device');
+        if ( ! $this->getDeviceSerial($data)) {
+            $this->log('SendLogHandler:Attendance log from unregistered device', [
+                'pure' => $data,
+            ]);
 
             return $this->buildResponse('sendlog', false);
         }
 
         // تبدیل به DTO
         $attendanceDTO = $this->mapper->mapToAttendanceDTO($data);
+
+        $this->log('SendLogHandler:Attendance log received', [
+            'pure'   => $data,
+            'mapped' => $attendanceDTO->toArray(),
+        ]);
 
         // پخش Event - کاربر مسئول ذخیره
         event(new AttendanceReceived($attendanceDTO));

@@ -250,12 +250,6 @@ class BiometricDeviceManager
             'send_status'     => false,
         ]);
 
-        Logger::debug('Command saved to database', [
-            'command_id'    => $command->id,
-            'device_serial' => $deviceSerial,
-            'command_name'  => $commandName,
-        ]);
-
         return $command;
     }
 

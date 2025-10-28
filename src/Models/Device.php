@@ -13,19 +13,19 @@ use Sajadsoft\BiometricDevices\Enums\DeviceModel;
 /**
  * Device Model
  *
- * @property int $id
- * @property string $serial
- * @property string $name
- * @property string $type
- * @property string|null $ip_address
- * @property int|null $port
- * @property bool $is_online
- * @property bool $block
+ * @property int                 $id
+ * @property string              $serial
+ * @property string              $name
+ * @property string              $type
+ * @property string|null         $ip_address
+ * @property int|null            $port
+ * @property bool                $is_online
+ * @property bool                $block
  * @property \Carbon\Carbon|null $last_connected_at
  * @property \Carbon\Carbon|null $last_disconnected_at
- * @property array|null $extra_attributes
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
+ * @property array|null          $extra_attributes
+ * @property \Carbon\Carbon      $created_at
+ * @property \Carbon\Carbon      $updated_at
  */
 class Device extends Model
 {
@@ -47,12 +47,12 @@ class Device extends Model
     protected function casts(): array
     {
         return [
-            'type' => DeviceModel::class,
-            'is_online' => 'boolean',
-            'block' => 'boolean',
-            'last_connected_at' => 'datetime',
+            'type'                 => DeviceModel::class,
+            'is_online'            => 'boolean',
+            'block'                => 'boolean',
+            'last_connected_at'    => 'datetime',
             'last_disconnected_at' => 'datetime',
-            'extra_attributes' => 'array',
+            'extra_attributes'     => 'array',
         ];
     }
 
@@ -98,7 +98,7 @@ class Device extends Model
     public function markAsOnline(): void
     {
         $this->update([
-            'is_online' => true,
+            'is_online'         => true,
             'last_connected_at' => now(),
         ]);
     }
@@ -107,7 +107,7 @@ class Device extends Model
     public function markAsOffline(): void
     {
         $this->update([
-            'is_online' => false,
+            'is_online'            => false,
             'last_disconnected_at' => now(),
         ]);
     }
