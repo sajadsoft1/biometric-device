@@ -19,7 +19,7 @@ enum VerificationMode: string
         return match (true) {
             $mode === 8  => self::FACE,       // checked
             $mode === 3  => self::CARD,       // checked
-            $mode === 1  => self::FINGERPRINT,// checked
+            $mode === 1  => self::FINGERPRINT, // checked
             $mode === 10 => self::PASSWORD,
             $mode === 50 => self::PHOTO,
             default      => self::UNKNOWN,

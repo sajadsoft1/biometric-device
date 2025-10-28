@@ -28,7 +28,8 @@ class BiometricDevicesServiceProvider extends ServiceProvider
 
         // Bind DataMapper
         $this->app->singleton(Contracts\DataMapperInterface::class, function ($app) {
-            $mapperClass = config('biometric-devices.mappers.zkteco-websocket');
+            $driver      = config('biometric-devices.default_driver', 'websocket');
+            $mapperClass = config("biometric-devices.mappers.aiface-{$driver}");
 
             return new $mapperClass;
         });
