@@ -16,7 +16,7 @@ class RegisterDeviceHandler extends BaseCommandHandler
     {
         $serialNum = $data['sn'] ?? null;
 
-        if ( ! $serialNum) {
+        if (! $serialNum) {
             $this->log('Registration failed: No serial number');
 
             return $this->buildResponse('reg', false);
@@ -27,7 +27,7 @@ class RegisterDeviceHandler extends BaseCommandHandler
 
         $this->log('Device registered', [
             'serial' => $serialNum,
-            'model'  => $deviceInfoDTO->modelName,
+            'model' => $deviceInfoDTO->modelName,
         ]);
 
         // ذخیره خودکار در دیتابیس
@@ -51,14 +51,14 @@ class RegisterDeviceHandler extends BaseCommandHandler
         return $deviceModel::updateOrCreate(
             ['serial' => $serial],
             [
-                'name'              => $deviceInfoDTO->modelName,
-                'is_online'         => true,
+                'name' => $deviceInfoDTO->modelName,
+                'is_online' => true,
                 'last_connected_at' => now(),
-                'extra_attributes'  => [
+                'extra_attributes' => [
                     'firmware_version' => $deviceInfoDTO->firmwareVersion,
-                    'user_capacity'    => $deviceInfoDTO->userCapacity,
-                    'log_capacity'     => $deviceInfoDTO->logCapacity,
-                    'device_type'      => $deviceInfoDTO->deviceType ?? 'unknown',
+                    'user_capacity' => $deviceInfoDTO->userCapacity,
+                    'log_capacity' => $deviceInfoDTO->logCapacity,
+                    'device_type' => $deviceInfoDTO->deviceType ?? 'unknown',
                 ],
             ]
         );

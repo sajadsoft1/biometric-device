@@ -20,8 +20,8 @@ class StartBiometricServerCommand extends Command
     public function handle(): int
     {
         $driver = $this->option('driver');
-        $host   = $this->option('host');
-        $port   = $this->option('port');
+        $host = $this->option('host');
+        $port = $this->option('port');
 
         $this->info('Starting biometric server...');
         $this->info("Driver: {$driver}");

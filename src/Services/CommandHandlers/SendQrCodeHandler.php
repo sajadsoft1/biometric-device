@@ -31,7 +31,7 @@ class SendQrCodeHandler extends BaseCommandHandler
     {
         $serialNum = $this->getDeviceSerial($data);
 
-        if ( ! $serialNum) {
+        if (! $serialNum) {
             $this->log('QR code from unregistered device');
 
             return $this->buildResponse('sendqrcode', false);
@@ -40,7 +40,7 @@ class SendQrCodeHandler extends BaseCommandHandler
         // استخراج محتوای QR code
         $qrCodeContent = $data['qrcode'] ?? $data['qr'] ?? null;
 
-        if ( ! $qrCodeContent) {
+        if (! $qrCodeContent) {
             $this->log('Empty QR code received');
 
             return $this->buildResponse('sendqrcode', false);
@@ -56,8 +56,8 @@ class SendQrCodeHandler extends BaseCommandHandler
         );
 
         $this->log('QR code scanned', [
-            'device'      => $serialNum,
-            'qr_length'   => strlen($qrCodeContent),
+            'device' => $serialNum,
+            'qr_length' => strlen($qrCodeContent),
             'employee_id' => $qrCodeDTO->employeeId,
         ]);
 
@@ -76,7 +76,7 @@ class SendQrCodeHandler extends BaseCommandHandler
     /** Parse timestamp from device format */
     protected function parseTimestamp(?string $time): Carbon
     {
-        if ( ! $time) {
+        if (! $time) {
             return Carbon::now();
         }
 

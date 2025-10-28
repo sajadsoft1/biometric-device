@@ -11,11 +11,11 @@ class Logger
     /**
      * Log a debug message if logging is enabled.
      *
-     * @param array<string, mixed> $context
+     * @param  array<string, mixed>  $context
      */
     public static function debug(string $message, array $context = []): void
     {
-        if ( ! self::isEnabled()) {
+        if (! self::isEnabled()) {
             return;
         }
 
@@ -25,11 +25,11 @@ class Logger
     /**
      * Log an info message if logging is enabled.
      *
-     * @param array<string, mixed> $context
+     * @param  array<string, mixed>  $context
      */
     public static function info(string $message, array $context = []): void
     {
-        if ( ! self::isEnabled()) {
+        if (! self::isEnabled()) {
             return;
         }
 
@@ -39,11 +39,11 @@ class Logger
     /**
      * Log a warning message if logging is enabled.
      *
-     * @param array<string, mixed> $context
+     * @param  array<string, mixed>  $context
      */
     public static function warning(string $message, array $context = []): void
     {
-        if ( ! self::isEnabled()) {
+        if (! self::isEnabled()) {
             return;
         }
 
@@ -53,11 +53,11 @@ class Logger
     /**
      * Log an error message if logging is enabled.
      *
-     * @param array<string, mixed> $context
+     * @param  array<string, mixed>  $context
      */
     public static function error(string $message, array $context = []): void
     {
-        if ( ! self::isEnabled()) {
+        if (! self::isEnabled()) {
             return;
         }
 

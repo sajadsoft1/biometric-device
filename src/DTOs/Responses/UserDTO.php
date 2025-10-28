@@ -28,16 +28,16 @@ class UserDTO
     public function toArray(): array
     {
         return [
-            'employee_id'        => $this->employeeId,
-            'name'               => $this->name,
-            'is_admin'           => $this->isAdmin,
-            'biometric_type'     => $this->biometricType->value,
+            'employee_id' => $this->employeeId,
+            'name' => $this->name,
+            'is_admin' => $this->isAdmin,
+            'biometric_type' => $this->biometricType->value,
             'has_biometric_data' => ! empty($this->biometricData),
-            'device_serial'      => $this->deviceSerial,
-            'card_number'        => $this->cardNumber,
-            'password'           => $this->password,
-            'enabled'            => $this->enabled,
-            'shift_id'           => $this->shiftId,
+            'device_serial' => $this->deviceSerial,
+            'card_number' => $this->cardNumber,
+            'password' => $this->password,
+            'enabled' => $this->enabled,
+            'shift_id' => $this->shiftId,
         ];
     }
 }

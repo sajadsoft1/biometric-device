@@ -33,14 +33,11 @@ class AIFaceWebSocketMapper extends AbstractDataMapper
      *     logindex:int,
      *     record: array{
      *      enrollid: int,
-     *      name?: string,
-     *      time?: string,
+     *      name: string,
+     *      time: string,
      *      mode:int,
      *      inout:int,
-     *      event:int,
-     *      card?: int,
-     *      pwd?: int,
-     *      workcode?: int
+     *      event:int
      *  }[]
      * } $data
      */
@@ -55,13 +52,9 @@ class AIFaceWebSocketMapper extends AbstractDataMapper
             timestamp: $this->parseTimestamp($record['time'] ?? null),
             verificationType: $this->mapVerificationMode($record['mode'] ?? 0),
             isCheckIn: (int) Arr::get($record, 'inout', 0) === 0,
-            temperature: isset($data['temp']) ? $data['temp'] / 10 : null,
             deviceSerial: $data['sn'] ?? '',
             photoBase64: $record['image'] ?? null,
-            cardNumber: isset($record['card']) ? (int) $record['card'] : null,
-            password: isset($record['pwd']) ? (int) $record['pwd'] : null,
             eventType: AttendanceEventType::tryFromValue($record['event'] ?? null),
-            workCode: isset($record['workcode']) ? (int) $record['workcode'] : null,
             rawData: $data,
         );
     }
@@ -173,6 +166,8 @@ class AIFaceWebSocketMapper extends AbstractDataMapper
     // FROM DTO TO Device Format
     // ============================================
 
+    // User Management
+
     public function mapAddUserCommand(AddUserDTO $dto): array
     {
         $backupNum = $this->biometricTypeToDeviceValue($dto->biometricType);
@@ -195,6 +190,49 @@ class AIFaceWebSocketMapper extends AbstractDataMapper
         return $command;
     }
 
+    public function mapDeleteUserCommand(\Sajadsoft\BiometricDevices\DTOs\Commands\DeleteUserDTO $dto): array
+    {
+        $command = [
+            'cmd'      => 'deleteuser',
+            'enrollid' => $dto->employeeId,
+        ];
+
+        // If biometric type is specified, delete only that type
+        // Otherwise, 13 = delete all biometric data
+        $command['backupnum'] = $dto->biometricType?->value ?? 13;
+
+        return $command;
+    }
+
+    public function mapGetUserInfoCommand(\Sajadsoft\BiometricDevices\DTOs\Commands\GetUserInfoDTO $dto): array
+    {
+        return [
+            'cmd'      => 'getuserinfo',
+            'enrollid' => $dto->employeeId,
+        ];
+    }
+
+    // Device Control
+
+    public function mapOpenDoorCommand(\Sajadsoft\BiometricDevices\DTOs\Commands\OpenDoorDTO $dto): array
+    {
+        return [
+            'cmd'      => 'opendoor',
+            'doornum'  => $dto->doorNumber,
+            'duration' => $dto->duration,
+        ];
+    }
+
+    public function mapSetTimeCommand(\Sajadsoft\BiometricDevices\DTOs\Commands\SetTimeDTO $dto): array
+    {
+        return [
+            'cmd'  => 'settime',
+            'time' => $dto->datetime->format('Y-m-d H:i:s'),
+        ];
+    }
+
+    // Access Control
+
     public function mapSetUserAccessCommand(SetUserAccessDTO $dto): array
     {
         return [
@@ -209,6 +247,24 @@ class AIFaceWebSocketMapper extends AbstractDataMapper
                     'endtime'   => $dto->endDate->format('Y-m-d') . ' 00:00:00',
                 ],
             ],
+        ];
+    }
+
+    public function mapSetDeviceLockCommand(\Sajadsoft\BiometricDevices\DTOs\Commands\SetDeviceLockDTO $dto): array
+    {
+        return [
+            'cmd'    => 'setdevlock',
+            'locked' => $dto->locked ? 1 : 0,
+        ];
+    }
+
+    // Attendance Logs
+
+    public function mapGetLogsCommand(\Sajadsoft\BiometricDevices\DTOs\Commands\GetLogsDTO $dto, string $commandName): array
+    {
+        return [
+            'cmd' => $commandName, // 'getalllog' or 'getnewlog'
+            'stn' => $dto->startFromBeginning ? 1 : 0,
         ];
     }
 

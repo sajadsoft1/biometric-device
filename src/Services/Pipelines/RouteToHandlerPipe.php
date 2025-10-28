@@ -18,7 +18,7 @@ class RouteToHandlerPipe
 
         if ($command) {
             // دریافت handler class
-            $handlerClass       = $command->getHandlerClass();
+            $handlerClass = $command->getHandlerClass();
             $context['handler'] = app($handlerClass);
 
             Logger::debug('Message routed to handler', [

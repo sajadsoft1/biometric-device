@@ -16,17 +16,17 @@ enum BiometricType: int
     case FINGERPRINT_7 = 7;
     case FINGERPRINT_8 = 8;
     case FINGERPRINT_9 = 9;
-    case PASSWORD      = 10;
-    case CARD          = 11;
-    case FACE_0        = 20;
-    case FACE_1        = 21;
-    case FACE_2        = 22;
-    case FACE_3        = 23;
-    case FACE_4        = 24;
-    case FACE_5        = 25;
-    case FACE_6        = 26;
-    case FACE_7        = 27;
-    case PHOTO         = 50;
+    case PASSWORD = 10;
+    case CARD = 11;
+    case FACE_0 = 20;
+    case FACE_1 = 21;
+    case FACE_2 = 22;
+    case FACE_3 = 23;
+    case FACE_4 = 24;
+    case FACE_5 = 25;
+    case FACE_6 = 26;
+    case FACE_7 = 27;
+    case PHOTO = 50;
 
     /** Get human-readable label */
     public function label(): string
@@ -42,17 +42,17 @@ enum BiometricType: int
             self::FINGERPRINT_7 => 'Fingerprint 8',
             self::FINGERPRINT_8 => 'Fingerprint 9',
             self::FINGERPRINT_9 => 'Fingerprint 10',
-            self::PASSWORD      => 'Password',
-            self::CARD          => 'Card',
-            self::FACE_0        => 'Face 1',
-            self::FACE_1        => 'Face 2',
-            self::FACE_2        => 'Face 3',
-            self::FACE_3        => 'Face 4',
-            self::FACE_4        => 'Face 5',
-            self::FACE_5        => 'Face 6',
-            self::FACE_6        => 'Face 7',
-            self::FACE_7        => 'Face 8',
-            self::PHOTO         => 'Photo',
+            self::PASSWORD => 'Password',
+            self::CARD => 'Card',
+            self::FACE_0 => 'Face 1',
+            self::FACE_1 => 'Face 2',
+            self::FACE_2 => 'Face 3',
+            self::FACE_3 => 'Face 4',
+            self::FACE_4 => 'Face 5',
+            self::FACE_5 => 'Face 6',
+            self::FACE_6 => 'Face 7',
+            self::FACE_7 => 'Face 8',
+            self::PHOTO => 'Photo',
         };
     }
 
@@ -60,12 +60,12 @@ enum BiometricType: int
     public function category(): string
     {
         return match (true) {
-            $this->value >= 0 && $this->value <= 9   => 'fingerprint',
+            $this->value >= 0 && $this->value <= 9 => 'fingerprint',
             $this->value >= 20 && $this->value <= 27 => 'face',
-            $this->value == 10                       => 'password',
-            $this->value == 11                       => 'card',
-            $this->value == 50                       => 'photo',
-            default                                  => 'unknown',
+            $this->value == 10 => 'password',
+            $this->value == 11 => 'card',
+            $this->value == 50 => 'photo',
+            default => 'unknown',
         };
     }
 

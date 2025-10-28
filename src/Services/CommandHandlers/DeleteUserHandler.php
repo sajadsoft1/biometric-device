@@ -12,7 +12,7 @@ class DeleteUserHandler extends BaseCommandHandler
     {
         $serialNum = $this->getDeviceSerial($data);
 
-        if ( ! $serialNum) {
+        if (! $serialNum) {
             return null;
         }
 

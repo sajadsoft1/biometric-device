@@ -27,8 +27,8 @@ abstract class BaseCommandHandler implements CommandHandlerInterface
     protected function buildResponse(string $command, bool $result, array $extra = []): array
     {
         return array_merge([
-            'ret'       => $command,
-            'result'    => $result,
+            'ret' => $command,
+            'result' => $result,
             'cloudtime' => now()->format('Y-m-d H:i:s'),
         ], $extra);
     }
@@ -56,20 +56,20 @@ abstract class BaseCommandHandler implements CommandHandlerInterface
         bool $success,
         ?array $responseData = null
     ): bool {
-        $deviceModel  = config('biometric-devices.models.device', Device::class);
+        $deviceModel = config('biometric-devices.models.device', Device::class);
         $commandModel = config('biometric-devices.models.device_command', DeviceCommand::class);
 
         // بررسی وجود Model ها
-        if ( ! class_exists($deviceModel) || ! class_exists($commandModel)) {
+        if (! class_exists($deviceModel) || ! class_exists($commandModel)) {
             return false;
         }
 
         // پیدا کردن دستگاه
         $device = $deviceModel::where('serial', $deviceSerial)->first();
 
-        if ( ! $device) {
+        if (! $device) {
             Logger::debug('Device not found for command status update', [
-                'serial'  => $deviceSerial,
+                'serial' => $deviceSerial,
                 'command' => $commandName,
             ]);
 
@@ -86,9 +86,9 @@ abstract class BaseCommandHandler implements CommandHandlerInterface
             ->latest('id')
             ->first();
 
-        if ( ! $command) {
+        if (! $command) {
             Logger::debug('No matching command found to update', [
-                'device_id'    => $device->id,
+                'device_id' => $device->id,
                 'command_name' => $commandName,
             ]);
 
@@ -100,15 +100,15 @@ abstract class BaseCommandHandler implements CommandHandlerInterface
             $command->markAsSuccess($responseData);
             Logger::debug('Command marked as success', [
                 'command_id' => $command->id,
-                'device'     => $deviceSerial,
+                'device' => $deviceSerial,
             ]);
         } else {
             $errorMessage = $responseData['error'] ?? 'Command failed';
             $command->markAsFailed($errorMessage, $responseData);
             Logger::debug('Command marked as failed', [
                 'command_id' => $command->id,
-                'device'     => $deviceSerial,
-                'error'      => $errorMessage,
+                'device' => $deviceSerial,
+                'error' => $errorMessage,
             ]);
         }
 

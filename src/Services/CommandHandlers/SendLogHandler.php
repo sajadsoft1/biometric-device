@@ -14,7 +14,7 @@ class SendLogHandler extends BaseCommandHandler
 {
     public function handle(array $data, $connection): ?array
     {
-        if ( ! $this->getDeviceSerial($data)) {
+        if (! $this->getDeviceSerial($data)) {
             $this->log('Attendance log from unregistered device');
 
             return $this->buildResponse('sendlog', false);

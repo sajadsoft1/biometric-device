@@ -21,11 +21,11 @@ class EnrollmentDTO
     public function toArray(): array
     {
         return [
-            'employee_id'        => $this->employeeId,
-            'biometric_type'     => $this->biometricType->value,
+            'employee_id' => $this->employeeId,
+            'biometric_type' => $this->biometricType->value,
             'biometric_category' => $this->biometricType->category(),
-            'is_admin'           => $this->isAdmin,
-            'device_serial'      => $this->deviceSerial,
+            'is_admin' => $this->isAdmin,
+            'device_serial' => $this->deviceSerial,
         ];
     }
 }

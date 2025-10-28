@@ -15,12 +15,12 @@ class DefaultCommandHandler extends BaseCommandHandler
     {
         $serialNum = $this->getDeviceSerial($data);
 
-        if ( ! $serialNum) {
+        if (! $serialNum) {
             return null;
         }
 
         $commandName = $data['ret'] ?? 'unknown';
-        $result      = $data['result'] ?? true;
+        $result = $data['result'] ?? true;
 
         $this->log("Default handler for: {$commandName}");
 

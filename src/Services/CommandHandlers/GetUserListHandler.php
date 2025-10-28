@@ -26,7 +26,7 @@ class GetUserListHandler extends BaseCommandHandler
      *  count: int,
      *  stn: bool,
      * } $data
-     * @param mixed $connection
+     * @param  mixed  $connection
      */
     public function handle(array $data, $connection): ?array
     {
@@ -35,7 +35,7 @@ class GetUserListHandler extends BaseCommandHandler
         ]);
         $serialNum = $this->getDeviceSerial($data);
 
-        if ( ! $serialNum) {
+        if (! $serialNum) {
             return null;
         }
 
@@ -43,14 +43,14 @@ class GetUserListHandler extends BaseCommandHandler
         $enrollments = [];
         if (isset($data['record']) && is_array($data['record'])) {
             foreach ($data['record'] as $record) {
-                $record['sn']  = $serialNum;
+                $record['sn'] = $serialNum;
                 $enrollments[] = $this->mapper->mapToEnrollmentDTO($record);
             }
         }
 
-        $count          = count($enrollments);
+        $count = count($enrollments);
         $remainingCount = $data['count'] ?? 0;
-        $hasMore        = $remainingCount > 0;
+        $hasMore = $remainingCount > 0;
 
         $this->log("User list received: {$count} enrollments", [
             'has_more' => $hasMore,

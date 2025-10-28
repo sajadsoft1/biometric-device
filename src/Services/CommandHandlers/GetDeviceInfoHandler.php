@@ -15,7 +15,7 @@ class GetDeviceInfoHandler extends BaseCommandHandler
     {
         $serialNum = $this->getDeviceSerial($data);
 
-        if ( ! $serialNum) {
+        if (! $serialNum) {
             return null;
         }
 
@@ -23,7 +23,7 @@ class GetDeviceInfoHandler extends BaseCommandHandler
         $deviceInfoDTO = $this->mapper->mapToDeviceInfoDTO($data);
 
         $this->log('Device info received', [
-            'model'    => $deviceInfoDTO->modelName,
+            'model' => $deviceInfoDTO->modelName,
             'firmware' => $deviceInfoDTO->firmwareVersion,
         ]);
 

@@ -7,6 +7,7 @@ namespace Sajadsoft\BiometricDevices\Services\DeviceDrivers;
 use Exception;
 use JsonException;
 use RuntimeException;
+use Sajadsoft\BiometricDevices\Support\Logger;
 
 /**
  * WebSocket driver for biometric devices
@@ -100,6 +101,7 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
 
     /**
      * Handle socket activity (data received)
+     *
      * @throws JsonException
      */
     protected function handleSocketActivity($socket): void
@@ -139,8 +141,18 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
             return;
         }
 
+        // Clean payload from control characters
+        $payload = $this->cleanPayload($payload);
+
         // Parse JSON
-        $data = json_decode($payload, true, 512, JSON_THROW_ON_ERROR);
+        try {
+            $data = json_decode($payload, true, 512, JSON_THROW_ON_ERROR);
+        } catch (JsonException $e) {
+            $this->warn("Invalid JSON from socket {$socketId}: {$e->getMessage()}");
+            $this->debug('Payload: ' . substr($payload, 0, 200));
+
+            return;
+        }
 
         if ( ! $data) {
             $this->warn("Invalid JSON from socket {$socketId}");
@@ -293,6 +305,19 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
     {
         $pong = chr(0x8A) . chr(0x00);
         socket_write($socket, $pong, strlen($pong));
+    }
+
+    /** Clean payload from control characters */
+    protected function cleanPayload(string $payload): string
+    {
+        // Remove null bytes and control characters (except tab, newline, carriage return)
+        $payload = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $payload);
+
+        // Remove UTF-8 BOM if present
+        $payload = str_replace("\xEF\xBB\xBF", '', $payload);
+
+        // Trim whitespace
+        return trim($payload);
     }
 
     /** Periodic tasks */
@@ -463,6 +488,10 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
     // Implementation of DeviceDriverInterface
     // ============================================
 
+    // ============================================
+    // User Management
+    // ============================================
+
     /** Send add user command */
     public function sendAddUser(string $deviceSerial, \Sajadsoft\BiometricDevices\DTOs\Commands\AddUserDTO $dto): bool
     {
@@ -482,15 +511,28 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
     }
 
     /** Send get user list command */
-    public function sendGetUserList(string $deviceSerial, \Sajadsoft\BiometricDevices\DTOs\Commands\GetUserListDTO $dto): bool
+    public function sendGetUserList(string $deviceSerial, bool $startFromBeginning = true): bool
     {
         $command = [
             'cmd' => 'getuserlist',
-            'stn' => $dto->startFromBeginning,
+            'stn' => $startFromBeginning ? 1 : 0,
         ];
 
         return $this->sendRawCommand($deviceSerial, 'getuserlist', $command);
     }
+
+    /** Send get user info command */
+    public function sendGetUserInfo(string $deviceSerial, \Sajadsoft\BiometricDevices\DTOs\Commands\GetUserInfoDTO $dto): bool
+    {
+        $mapper  = app(\Sajadsoft\BiometricDevices\Contracts\DataMapperInterface::class);
+        $command = $mapper->mapGetUserInfoCommand($dto);
+
+        return $this->sendRawCommand($deviceSerial, 'getuserinfo', $command);
+    }
+
+    // ============================================
+    // Device Control
+    // ============================================
 
     /** Send open door command */
     public function sendOpenDoor(string $deviceSerial, \Sajadsoft\BiometricDevices\DTOs\Commands\OpenDoorDTO $dto): bool
@@ -499,6 +541,89 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
         $command = $mapper->mapOpenDoorCommand($dto);
 
         return $this->sendRawCommand($deviceSerial, 'opendoor', $command);
+    }
+
+    /** Send get device info command */
+    public function sendGetDeviceInfo(string $deviceSerial): bool
+    {
+        $command = [
+            'cmd' => 'getdevinfo',
+        ];
+
+        return $this->sendRawCommand($deviceSerial, 'getdevinfo', $command);
+    }
+
+    /** Send reboot command */
+    public function sendReboot(string $deviceSerial): bool
+    {
+        $command = [
+            'cmd' => 'reboot',
+        ];
+
+        return $this->sendRawCommand($deviceSerial, 'reboot', $command);
+    }
+
+    /** Send init system command */
+    public function sendInitSystem(string $deviceSerial): bool
+    {
+        $command = [
+            'cmd' => 'initsys',
+        ];
+
+        return $this->sendRawCommand($deviceSerial, 'initsys', $command);
+    }
+
+    /** Send set time command */
+    public function sendSetTime(string $deviceSerial, \Sajadsoft\BiometricDevices\DTOs\Commands\SetTimeDTO $dto): bool
+    {
+        $mapper  = app(\Sajadsoft\BiometricDevices\Contracts\DataMapperInterface::class);
+        $command = $mapper->mapSetTimeCommand($dto);
+
+        return $this->sendRawCommand($deviceSerial, 'settime', $command);
+    }
+
+    // ============================================
+    // Access Control
+    // ============================================
+
+    /** Send set user access command */
+    public function sendSetUserAccess(string $deviceSerial, \Sajadsoft\BiometricDevices\DTOs\Commands\SetUserAccessDTO $dto): bool
+    {
+        $mapper  = app(\Sajadsoft\BiometricDevices\Contracts\DataMapperInterface::class);
+        $command = $mapper->mapSetUserAccessCommand($dto);
+
+        return $this->sendRawCommand($deviceSerial, 'setuserlock', $command);
+    }
+
+    /** Send set device lock command */
+    public function sendSetDeviceLock(string $deviceSerial, \Sajadsoft\BiometricDevices\DTOs\Commands\SetDeviceLockDTO $dto): bool
+    {
+        $mapper  = app(\Sajadsoft\BiometricDevices\Contracts\DataMapperInterface::class);
+        $command = $mapper->mapSetDeviceLockCommand($dto);
+
+        return $this->sendRawCommand($deviceSerial, 'setdevlock', $command);
+    }
+
+    // ============================================
+    // Attendance Logs
+    // ============================================
+
+    /** Send get all logs command */
+    public function sendGetAllLogs(string $deviceSerial, \Sajadsoft\BiometricDevices\DTOs\Commands\GetLogsDTO $dto): bool
+    {
+        $mapper  = app(\Sajadsoft\BiometricDevices\Contracts\DataMapperInterface::class);
+        $command = $mapper->mapGetLogsCommand($dto, 'getalllog');
+
+        return $this->sendRawCommand($deviceSerial, 'getalllog', $command);
+    }
+
+    /** Send get new logs command */
+    public function sendGetNewLogs(string $deviceSerial, \Sajadsoft\BiometricDevices\DTOs\Commands\GetLogsDTO $dto): bool
+    {
+        $mapper  = app(\Sajadsoft\BiometricDevices\Contracts\DataMapperInterface::class);
+        $command = $mapper->mapGetLogsCommand($dto, 'getnewlog');
+
+        return $this->sendRawCommand($deviceSerial, 'getnewlog', $command);
     }
 
     /** Send raw command to device */

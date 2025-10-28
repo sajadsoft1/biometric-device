@@ -23,10 +23,10 @@ class SetUserAccessDTO
     {
         return [
             'employee_id' => $this->employeeId,
-            'week_zone'   => $this->weekZone,
-            'group'       => $this->group,
-            'start_date'  => $this->startDate->toDateString(),
-            'end_date'    => $this->endDate->toDateString(),
+            'week_zone' => $this->weekZone,
+            'group' => $this->group,
+            'start_date' => $this->startDate->toDateString(),
+            'end_date' => $this->endDate->toDateString(),
         ];
     }
 }

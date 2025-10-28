@@ -19,8 +19,10 @@
 ## دستگاه‌های پشتیبانی شده
 
 - دستگاه‌های WebSocket زمان و حضور AIFace (AiFace، FaceLite، SpeedFace و غیره)
-- دستگاه‌های TCP/IP زمان و حضور AIFace (به زودی)
+- دستگاه‌های WebSocket زمان و حضور ZKTeco (سازگار با AIFace)
+- دستگاه‌های TCP/IP زمان و حضور (به زودی)
 - دستگاه‌های سفارشی (از طریق رابط DataMapper)
+- **پشتیبانی همزمان از چند نوع دستگاه** - می‌توانید به طور همزمان از انواع مختلف دستگاه‌ها استفاده کنید
 
 ## نصب
 
@@ -53,23 +55,34 @@ Migration های خودکار (Auto-load):
 - `2020_01_01_000001_create_devices_table.php` - جدول دستگاه‌ها
 - `2020_01_01_000002_create_device_commands_table.php` - جدول دستورات
 
-## شروع سریع
+## 🚀 شروع سریع
 
-### ۱. پیکربندی (.env)
+### مراحل نصب و راه‌اندازی در 5 دقیقه
 
-```env
-BIOMETRIC_WS_HOST=192.168.1.4
-BIOMETRIC_WS_PORT=7788
-BIOMETRIC_DRIVER=websocket
+#### ۱. نصب پکیج
+
+```bash
+composer require sajadsoft1/biometric-device
+php artisan vendor:publish --tag=biometric-devices-config
+php artisan migrate
 ```
 
-### ۲. راه‌اندازی سرور
+#### ۲. پیکربندی (.env)
+
+```env
+BIOMETRIC_WS_HOST=0.0.0.0
+BIOMETRIC_WS_PORT=7788
+BIOMETRIC_DRIVER=websocket
+BIOMETRIC_DEVICE_TYPE=aiface
+```
+
+#### ۳. راه‌اندازی سرور
 
 ```bash
 php artisan biometric:start-server
 ```
 
-### ۳. گوش دادن به رویدادها
+#### ۴. گوش دادن به رویدادها
 
 **🔔 نکته مهم (Laravel 11+):**  
 در **Laravel 11 و بالاتر**، Listener ها به صورت **خودکار** کشف می‌شوند (Auto-Discovery). اگر متد Listener شما type-hint داشته باشد، **نیازی به ثبت دستی در `AppServiceProvider` نیست**:
@@ -390,6 +403,74 @@ $commands = $device->commands()
     ->get();
 ```
 
+## 📋 راهنمای دستورات (Commands Reference)
+
+### دستورات موجود و متدهای Facade
+
+| دستور | متد Facade | پارامترها | توضیحات | مستندات |
+|-------|------------|-----------|---------|---------|
+| **مدیریت کاربران** |
+| `setuserinfo` | `addUser($serial, AddUserDTO)` | employeeId, name, biometricType, biometricData, isAdmin | افزودن/ویرایش کاربر | [📖](docs/USAGE.md#1-اضافه-کردن-کاربر-با-اثر-انگشت-fingerprint) |
+| `deleteuser` | `deleteUser($serial, $employeeId, ?$type)` | employeeId, biometricType (optional) | حذف کاربر یا بیومتریک خاص | [📖](docs/USAGE.md#6-حذف-کاربر) |
+| `getuserlist` | `getUserList($serial, $startFromBeginning)` | startFromBeginning (bool) | دریافت لیست کاربران | [📖](docs/USAGE.md#7-دریافت-لیست-کاربران) |
+| `getuserinfo` | `sendRawCommand($serial, 'getuserinfo', [...])` | enrollid | دریافت اطلاعات کاربر با بیومتریک | [📖](docs/USAGE.md#8-دریافت-اطلاعات-یک-کاربر-خاص) |
+| `senduser` | - | - | دستگاه خودش ارسال می‌کند | - |
+| **کنترل دستگاه** |
+| `opendoor` | `openDoor($serial, $doorNumber)` | doorNumber, duration | باز کردن درب | [📖](docs/USAGE.md#1-باز-کردن-درب) |
+| `getdevinfo` | `getDeviceInfo($serial)` | - | دریافت اطلاعات دستگاه | [📖](docs/USAGE.md#2-دریافت-اطلاعات-دستگاه) |
+| `reboot` | `reboot($serial)` | - | راه‌اندازی مجدد دستگاه | [📖](docs/USAGE.md#3-راهاندازی-مجدد-دستگاه-reboot) |
+| `initsys` | `initSystem($serial)` | - | ⚠️ پاک کردن کل داده‌های دستگاه | [📖](docs/USAGE.md#4-مقداردهی-اولیه-سیستم-factory-reset) |
+| `settime` | `sendRawCommand($serial, 'settime', [...])` | time | تنظیم زمان دستگاه | [📖](docs/USAGE.md#5-تنظیم-زمان-دستگاه) |
+| **کنترل دسترسی** |
+| `setuserlock` | `setUserAccess($serial, SetUserAccessDTO)` | employeeId, weekZone, group, startDate, endDate | تنظیم دسترسی زمان‌بندی شده | [📖](docs/USAGE.md#1-تنظیم-دسترسی-زمانبندی-شده-کاربر) |
+| `setdevlock` | `sendRawCommand($serial, 'setdevlock', [...])` | locked (bool) | قفل/باز کردن دستگاه | [📖](docs/USAGE.md#2-قفل-کردنباز-کردن-دستگاه) |
+| `getuserlock` | `sendRawCommand($serial, 'getuserlock', [...])` | enrollid | دریافت وضعیت قفل کاربر | - |
+| `getdevlock` | `sendRawCommand($serial, 'getdevlock', [...])` | - | دریافت وضعیت قفل دستگاه | - |
+| **مدیریت لاگ‌ها** |
+| `sendlog` | - | - | دستگاه خودش ارسال می‌کند | - |
+| `getalllog` | `sendRawCommand($serial, 'getalllog', [...])` | stn | دریافت تمام لاگ‌ها | [📖](docs/USAGE.md#1-دریافت-تمام-لاگها) |
+| `getnewlog` | `sendRawCommand($serial, 'getnewlog', [...])` | stn | دریافت لاگ‌های جدید | [📖](docs/USAGE.md#2-دریافت-لاگهای-جدید) |
+| **سایر** |
+| `reg` | - | - | ثبت دستگاه (خودکار) | - |
+| `sendqrcode` | - | - | دستگاه خودش ارسال می‌کند | - |
+| `setusername` | `sendRawCommand($serial, 'setusername', [...])` | enrollid, name | تغییر نام کاربر | [📖](docs/EXAMPLES.md#1-ارسال-دستور-سفارشی-raw-command) |
+| `cleanadmin` | `sendRawCommand($serial, 'cleanadmin', [...])` | - | پاک کردن تمام ادمین‌ها | [📖](docs/EXAMPLES.md#1-ارسال-دستور-سفارشی-raw-command) |
+
+### نکات مهم
+
+- ✅ **دستورات خودکار:** `reg`, `senduser`, `sendlog`, `sendqrcode` توسط دستگاه خودش ارسال می‌شوند
+- ✅ **ذخیره خودکار:** تمام دستورات به صورت خودکار در جدول `device_commands` ذخیره می‌شوند
+- ✅ **وضعیت خودکار:** وضعیت دستورات (PENDING → SENT → SUCCESS/FAILED) به صورت خودکار تغییر می‌کند
+- ⚠️ **دستورات خطرناک:** `initsys` و `cleanadmin` باید با احتیاط استفاده شوند
+
+### نمونه استفاده
+
+```php
+use Sajadsoft\BiometricDevices\Facades\BiometricDevice;
+use Sajadsoft\BiometricDevices\DTOs\Commands\AddUserDTO;
+use Sajadsoft\BiometricDevices\Enums\BiometricType;
+
+// اضافه کردن کاربر
+$dto = new AddUserDTO(
+    employeeId: 1001,
+    name: 'علی احمدی',
+    biometricType: BiometricType::FACE_0,
+    biometricData: 'BASE64_TEMPLATE',
+    isAdmin: false
+);
+BiometricDevice::addUser('DEVICE_SERIAL', $dto);
+
+// باز کردن درب
+BiometricDevice::openDoor('DEVICE_SERIAL', doorNumber: 1);
+
+// دریافت اطلاعات دستگاه
+BiometricDevice::getDeviceInfo('DEVICE_SERIAL');
+```
+
+برای نمونه‌های بیشتر، [راهنمای کامل استفاده](docs/USAGE.md) را مطالعه کنید.
+
+---
+
 ## رویدادهای موجود
 
 | رویداد | Properties | توضیحات |
@@ -579,6 +660,66 @@ BiometricDevice::initSystem(string $serial);
 BiometricDevice::setUserAccess(string $serial, SetUserAccessDTO $dto);
 ```
 
+## استفاده از چند نوع دستگاه به طور همزمان
+
+پکیج از استفاده همزمان چند نوع دستگاه مختلف پشتیبانی می‌کند.
+
+### تنظیم نوع دستگاه در دیتابیس
+
+هر دستگاه می‌تواند `type` مخصوص به خود را داشته باشد:
+
+```php
+use Sajadsoft\BiometricDevices\Models\Device;
+use Sajadsoft\BiometricDevices\Enums\DeviceModel;
+
+// ایجاد دستگاه AIFace
+$aifaceDevice = Device::create([
+    'serial' => 'AIFACE001',
+    'name' => 'AIFace Main Entrance',
+    'type' => DeviceModel::AI_FACE,
+    'ip_address' => '192.168.1.100',
+    'port' => 7788,
+]);
+
+// ایجاد دستگاه ZKTeco
+$zktecoDevice = Device::create([
+    'serial' => 'ZKTECO001',
+    'name' => 'ZKTeco Back Door',
+    'type' => DeviceModel::ZK_TECO,
+    'ip_address' => '192.168.1.101',
+    'port' => 7788,
+]);
+```
+
+### استفاده از MapperFactory
+
+برای ارسال دستورات به دستگاه‌های مختلف، از `MapperFactory` استفاده کنید:
+
+```php
+use Sajadsoft\BiometricDevices\Services\MapperFactory;
+
+// دریافت mapper مخصوص هر دستگاه
+$device = Device::find($deviceId);
+
+// ایجاد mapper بر اساس نوع دستگاه
+$mapper = MapperFactory::create(
+    $device->type->value,  // 'aiface' or 'zkteco'
+    'websocket'            // protocol
+);
+
+// استفاده از mapper
+$attendanceDTO = $mapper->mapToAttendanceDTO($rawData);
+```
+
+### تنظیمات محیط
+
+در فایل `.env` می‌توانید نوع پیش‌فرض دستگاه را تعیین کنید:
+
+```env
+BIOMETRIC_DEVICE_TYPE=aiface  # یا zkteco
+BIOMETRIC_DRIVER=websocket
+```
+
 ## پشتیبانی از دستگاه‌های سفارشی
 
 DataMapper خود را برای دستگاه‌های سفارشی ایجاد کنید:
@@ -662,10 +803,24 @@ class Device extends BaseDevice
 
 راهنمای کامل: [EXTENDING-MODELS.md](EXTENDING-MODELS.md)
 
-## مستندات
+## 📚 مستندات
 
-- [گسترش مدل‌ها (Extending Models)](EXTENDING-MODELS.md)
-- [مثال‌های کاربردی (Usage Examples)](USAGE-EXAMPLES.md)
+### راهنماهای کامل
+
+- **[📖 راهنمای استفاده (Usage Guide)](docs/USAGE.md)** - راهنمای جامع با نمونه‌های عملی
+- **[💡 نمونه‌های پیشرفته (Advanced Examples)](docs/EXAMPLES.md)** - نمونه‌های Integration و کاربردهای پیشرفته
+- **[🔧 گسترش مدل‌ها (Extending Models)](docs/EXTENDING-MODELS.md)** - راهنمای Extend کردن Models
+
+### Quick Links
+
+| بخش | لینک |
+|-----|------|
+| نصب و راه‌اندازی | [Installation Guide](docs/USAGE.md#نصب-و-راهاندازی) |
+| مدیریت کاربران | [User Management](docs/USAGE.md#مدیریت-کاربران) |
+| کنترل دستگاه | [Device Control](docs/USAGE.md#کنترل-دستگاه) |
+| رویدادها | [Events Guide](docs/USAGE.md#رویدادها) |
+| استفاده پیشرفته | [Advanced Usage](docs/USAGE.md#استفاده-پیشرفته) |
+| عیب‌یابی | [Troubleshooting](docs/USAGE.md#عیبیابی-troubleshooting) |
 
 ## ساختار پکیج
 

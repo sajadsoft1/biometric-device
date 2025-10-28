@@ -19,13 +19,9 @@ readonly class AttendanceDTO
         public Carbon $timestamp,
         public VerificationMode $verificationType,
         public bool $isCheckIn,
-        public ?float $temperature,
         public string $deviceSerial,
         public ?string $photoBase64,
-        public ?int $cardNumber,
-        public ?int $password,
         public ?AttendanceEventType $eventType,
-        public ?int $workCode,
         public array $rawData,
     ) {}
 
@@ -33,20 +29,16 @@ readonly class AttendanceDTO
     public function toArray(): array
     {
         return [
-            'employee_id'       => $this->employeeId,
-            'employee_name'     => $this->employeeName,
-            'timestamp'         => $this->timestamp->toIso8601String(),
+            'employee_id' => $this->employeeId,
+            'employee_name' => $this->employeeName,
+            'timestamp' => $this->timestamp->toIso8601String(),
             'verification_type' => $this->verificationType->value,
-            'is_check_in'       => $this->isCheckIn,
-            'temperature'       => $this->temperature,
-            'device_serial'     => $this->deviceSerial,
-            'photo'             => $this->photoBase64,
-            'card_number'       => $this->cardNumber,
-            'password'          => $this->password,
-            'event_type'        => $this->eventType?->value,
-            'event_type_label'  => $this->eventType?->description(),
-            'work_code'         => $this->workCode,
-            'row_data'          => $this->rawData,
+            'is_check_in' => $this->isCheckIn,
+            'device_serial' => $this->deviceSerial,
+            'photo' => $this->photoBase64,
+            'event_type' => $this->eventType?->value,
+            'event_type_label' => $this->eventType?->description(),
+            'row_data' => $this->rawData,
         ];
     }
 }

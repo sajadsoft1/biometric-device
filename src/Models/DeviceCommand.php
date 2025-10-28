@@ -12,18 +12,18 @@ use Sajadsoft\BiometricDevices\Enums\DeviceCommandStatusEnum;
 /**
  * Device Command Model
  *
- * @property int                     $id
- * @property int                     $device_id
- * @property string                  $command_name
- * @property string|null             $command_content
+ * @property int $id
+ * @property int $device_id
+ * @property string $command_name
+ * @property string|null $command_content
  * @property DeviceCommandStatusEnum $status
- * @property bool                    $send_status
- * @property int                     $error_count
- * @property string|null             $error_message
- * @property \Carbon\Carbon|null     $executed_at
- * @property string|null             $response
- * @property \Carbon\Carbon          $created_at
- * @property \Carbon\Carbon          $updated_at
+ * @property bool $send_status
+ * @property int $error_count
+ * @property string|null $error_message
+ * @property \Carbon\Carbon|null $executed_at
+ * @property string|null $response
+ * @property \Carbon\Carbon $created_at
+ * @property \Carbon\Carbon $updated_at
  */
 class DeviceCommand extends Model
 {
@@ -47,7 +47,7 @@ class DeviceCommand extends Model
             'send_status' => 'boolean',
             'error_count' => 'integer',
             'executed_at' => 'datetime',
-            'status'      => DeviceCommandStatusEnum::class,
+            'status' => DeviceCommandStatusEnum::class,
         ];
     }
 
@@ -100,7 +100,7 @@ class DeviceCommand extends Model
     public function markAsSent(): bool
     {
         return $this->update([
-            'status'      => DeviceCommandStatusEnum::SENT,
+            'status' => DeviceCommandStatusEnum::SENT,
             'send_status' => true,
         ]);
     }
@@ -109,9 +109,9 @@ class DeviceCommand extends Model
     public function markAsSuccess(?array $responseData = null): bool
     {
         return $this->update([
-            'status'      => DeviceCommandStatusEnum::SUCCESS,
+            'status' => DeviceCommandStatusEnum::SUCCESS,
             'executed_at' => now(),
-            'response'    => $responseData ? json_encode($responseData) : null,
+            'response' => $responseData ? json_encode($responseData) : null,
         ]);
     }
 
@@ -119,11 +119,11 @@ class DeviceCommand extends Model
     public function markAsFailed(?string $errorMessage = null, ?array $responseData = null): bool
     {
         return $this->update([
-            'status'        => DeviceCommandStatusEnum::FAILED,
-            'error_count'   => $this->error_count + 1,
+            'status' => DeviceCommandStatusEnum::FAILED,
+            'error_count' => $this->error_count + 1,
             'error_message' => $errorMessage,
-            'executed_at'   => now(),
-            'response'      => $responseData ? json_encode($responseData) : null,
+            'executed_at' => now(),
+            'response' => $responseData ? json_encode($responseData) : null,
         ]);
     }
 

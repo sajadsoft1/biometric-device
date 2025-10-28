@@ -13,6 +13,7 @@ use Sajadsoft\BiometricDevices\Enums\DeviceCommandStatusEnum;
 use Sajadsoft\BiometricDevices\Events\CommandSent;
 use Sajadsoft\BiometricDevices\Models\Device;
 use Sajadsoft\BiometricDevices\Models\DeviceCommand;
+use Sajadsoft\BiometricDevices\Support\Logger;
 
 /**
  * Main manager class for biometric device operations
@@ -32,6 +33,10 @@ class BiometricDeviceManager
         $this->mapper = new $mapperClass;
     }
 
+    // ============================================
+    // User Management
+    // ============================================
+
     /** Send command to add user */
     public function addUser(string $deviceSerial, AddUserDTO $dto): void
     {
@@ -43,13 +48,14 @@ class BiometricDeviceManager
     /** Send command to delete user */
     public function deleteUser(string $deviceSerial, int $employeeId, ?BiometricType $biometricType = null): void
     {
-        $command = [
-            'cmd'       => 'deleteuser',
-            'enrollid'  => $employeeId,
-            'backupnum' => $biometricType?->value ?? 13, // 13 = delete all
-        ];
+        $dto = new DTOs\Commands\DeleteUserDTO(
+            employeeId: $employeeId,
+            biometricType: $biometricType
+        );
 
-        $this->sendRawCommand($deviceSerial, 'deleteuser', $command);
+        $command = $this->mapper->mapDeleteUserCommand($dto);
+
+        $this->sendRawCommand($deviceSerial, 'deleteuser', $command, $dto);
     }
 
     /** Send command to get user list */
@@ -63,15 +69,33 @@ class BiometricDeviceManager
         $this->sendRawCommand($deviceSerial, 'getuserlist', $command);
     }
 
-    /** Send command to open door */
-    public function openDoor(string $deviceSerial, int $doorNumber = 1): void
+    /** Send command to get user info */
+    public function getUserInfo(string $deviceSerial, int $employeeId): void
     {
-        $command = [
-            'cmd'     => 'opendoor',
-            'doornum' => $doorNumber,
-        ];
+        $dto = new DTOs\Commands\GetUserInfoDTO(
+            employeeId: $employeeId
+        );
 
-        $this->sendRawCommand($deviceSerial, 'opendoor', $command);
+        $command = $this->mapper->mapGetUserInfoCommand($dto);
+
+        $this->sendRawCommand($deviceSerial, 'getuserinfo', $command, $dto);
+    }
+
+    // ============================================
+    // Device Control
+    // ============================================
+
+    /** Send command to open door */
+    public function openDoor(string $deviceSerial, int $doorNumber = 1, int $duration = 5): void
+    {
+        $dto = new DTOs\Commands\OpenDoorDTO(
+            doorNumber: $doorNumber,
+            duration: $duration
+        );
+
+        $command = $this->mapper->mapOpenDoorCommand($dto);
+
+        $this->sendRawCommand($deviceSerial, 'opendoor', $command, $dto);
     }
 
     /** Send command to get device info */
@@ -92,12 +116,70 @@ class BiometricDeviceManager
         $this->sendRawCommand($deviceSerial, 'initsys', ['cmd' => 'initsys']);
     }
 
+    /** Set device time */
+    public function setTime(string $deviceSerial, \Carbon\Carbon $datetime): void
+    {
+        $dto = new DTOs\Commands\SetTimeDTO(
+            datetime: $datetime
+        );
+
+        $command = $this->mapper->mapSetTimeCommand($dto);
+
+        $this->sendRawCommand($deviceSerial, 'settime', $command, $dto);
+    }
+
+    // ============================================
+    // Access Control
+    // ============================================
+
     /** Set user access permissions */
     public function setUserAccess(string $deviceSerial, SetUserAccessDTO $dto): void
     {
         $command = $this->mapper->mapSetUserAccessCommand($dto);
 
         $this->sendRawCommand($deviceSerial, 'setuserlock', $command, $dto);
+    }
+
+    /** Set device lock status */
+    public function setDeviceLock(string $deviceSerial, bool $locked): void
+    {
+        $dto = new DTOs\Commands\SetDeviceLockDTO(
+            locked: $locked
+        );
+
+        $command = $this->mapper->mapSetDeviceLockCommand($dto);
+
+        $this->sendRawCommand($deviceSerial, 'setdevlock', $command, $dto);
+    }
+
+    // ============================================
+    // Attendance Logs
+    // ============================================
+
+    /** Get all attendance logs from device */
+    public function getAllLogs(string $deviceSerial, bool $startFromBeginning = true): void
+    {
+        $dto = new DTOs\Commands\GetLogsDTO(
+            startFromBeginning: $startFromBeginning,
+            newLogsOnly: false
+        );
+
+        $command = $this->mapper->mapGetLogsCommand($dto, 'getalllog');
+
+        $this->sendRawCommand($deviceSerial, 'getalllog', $command, $dto);
+    }
+
+    /** Get new attendance logs from device */
+    public function getNewLogs(string $deviceSerial, bool $startFromBeginning = true): void
+    {
+        $dto = new DTOs\Commands\GetLogsDTO(
+            startFromBeginning: $startFromBeginning,
+            newLogsOnly: true
+        );
+
+        $command = $this->mapper->mapGetLogsCommand($dto, 'getnewlog');
+
+        $this->sendRawCommand($deviceSerial, 'getnewlog', $command, $dto);
     }
 
     /**

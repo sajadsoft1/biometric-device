@@ -31,11 +31,11 @@ class SendUserHandler extends BaseCommandHandler
      *  shiftid: int,
      *  sn: string,
      * } $data
-     * @param mixed $connection
+     * @param  mixed  $connection
      */
     public function handle(array $data, $connection): ?array
     {
-        if ( ! isset($data['enrollid'])) {
+        if (! isset($data['enrollid'])) {
             return null;
         }
 
@@ -46,8 +46,8 @@ class SendUserHandler extends BaseCommandHandler
 
         $this->log('User info sent by device', [
             'employee_id' => $userDTO->employeeId,
-            'name'        => $userDTO->name,
-            'device'      => $serialNum,
+            'name' => $userDTO->name,
+            'device' => $serialNum,
         ]);
 
         // بررسی وجود command مرتبط در دیتابیس

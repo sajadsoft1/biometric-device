@@ -7,6 +7,7 @@ namespace Sajadsoft\BiometricDevices\Services\DeviceDrivers;
 use Illuminate\Console\Command;
 use Sajadsoft\BiometricDevices\Contracts\DeviceDriverInterface;
 use Sajadsoft\BiometricDevices\Services\Pipelines\MessagePipeline;
+use Sajadsoft\BiometricDevices\Support\Logger;
 
 /**
  * Abstract base class for device drivers
@@ -37,7 +38,7 @@ abstract class AbstractDeviceDriver implements DeviceDriverInterface
         $this->console?->info($message);
 
         // لاگ فقط اگر console نداشتیم (مثلاً در background)
-        if ( ! $this->console) {
+        if (! $this->console) {
             Logger::info($message);
         }
     }
@@ -49,7 +50,7 @@ abstract class AbstractDeviceDriver implements DeviceDriverInterface
         $this->console?->warn($message);
 
         // لاگ فقط اگر console نداشتیم یا برای warning ها
-        if ( ! $this->console) {
+        if (! $this->console) {
             Logger::warning($message);
         }
     }
@@ -64,12 +65,19 @@ abstract class AbstractDeviceDriver implements DeviceDriverInterface
         Logger::error($message);
     }
 
+    /** Output debug message (logs only, doesn't show in console) */
+    protected function debug(string $message): void
+    {
+        // Debug messages فقط در log ثبت می‌شوند (تا console شلوغ نشود)
+        Logger::debug($message);
+    }
+
     /** Process message through pipeline */
     protected function processMessage(array $data, $connection, ?string $deviceSerial = null): ?array
     {
         $context = [
-            'data'          => $data,
-            'connection'    => $connection,
+            'data' => $data,
+            'connection' => $connection,
             'device_serial' => $deviceSerial,
         ];
 
@@ -77,7 +85,7 @@ abstract class AbstractDeviceDriver implements DeviceDriverInterface
         return $this->pipeline->process($context, function ($context) {
             $handler = $context['handler'] ?? null;
 
-            if ( ! $handler) {
+            if (! $handler) {
                 return;
             }
 

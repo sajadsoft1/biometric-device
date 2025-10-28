@@ -16,14 +16,14 @@ class GetAllLogHandler extends BaseCommandHandler
     {
         $serialNum = $this->getDeviceSerial($data);
 
-        if ( ! $serialNum) {
+        if (! $serialNum) {
             return null;
         }
 
         // پردازش هر رکورد
         if (isset($data['record']) && is_array($data['record'])) {
             foreach ($data['record'] as $record) {
-                $record['sn']  = $serialNum;
+                $record['sn'] = $serialNum;
                 $attendanceDTO = $this->mapper->mapToAttendanceDTO($record);
                 event(new AttendanceReceived($attendanceDTO));
             }

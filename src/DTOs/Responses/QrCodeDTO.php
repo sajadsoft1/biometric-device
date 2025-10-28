@@ -24,11 +24,11 @@ readonly class QrCodeDTO
     public function toArray(): array
     {
         return [
-            'qr_code_data'  => $this->qrCodeData,
+            'qr_code_data' => $this->qrCodeData,
             'device_serial' => $this->deviceSerial,
-            'timestamp'     => $this->timestamp->toIso8601String(),
-            'employee_id'   => $this->employeeId,
-            'raw_data'      => $this->rawData,
+            'timestamp' => $this->timestamp->toIso8601String(),
+            'employee_id' => $this->employeeId,
+            'raw_data' => $this->rawData,
         ];
     }
 }

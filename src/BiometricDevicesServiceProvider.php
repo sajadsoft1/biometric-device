@@ -6,9 +6,12 @@ namespace Sajadsoft\BiometricDevices;
 
 use Illuminate\Support\ServiceProvider;
 use Sajadsoft\BiometricDevices\Console\Commands\StartBiometricServerCommand;
+use Sajadsoft\BiometricDevices\Services\MapperFactory;
 
 /**
  * Service Provider for Biometric Devices Package
+ *
+ * Supports multiple device types simultaneously using MapperFactory
  */
 class BiometricDevicesServiceProvider extends ServiceProvider
 {
@@ -17,7 +20,7 @@ class BiometricDevicesServiceProvider extends ServiceProvider
     {
         // Merge config
         $this->mergeConfigFrom(
-            __DIR__ . '/../config/biometric-devices.php',
+            __DIR__.'/../config/biometric-devices.php',
             'biometric-devices'
         );
 
@@ -26,12 +29,15 @@ class BiometricDevicesServiceProvider extends ServiceProvider
             return new BiometricDeviceManager($app);
         });
 
-        // Bind DataMapper
+        // Bind DataMapper - uses default configuration
+        // For device-specific mappers, use MapperFactory::create($deviceType, $protocol)
         $this->app->singleton(Contracts\DataMapperInterface::class, function ($app) {
-            $driver      = config('biometric-devices.default_driver', 'websocket');
-            $mapperClass = config("biometric-devices.mappers.aiface-{$driver}");
+            return MapperFactory::createDefault();
+        });
 
-            return new $mapperClass;
+        // Bind MapperFactory for creating device-specific mappers
+        $this->app->singleton(MapperFactory::class, function ($app) {
+            return new MapperFactory;
         });
     }
 
@@ -40,16 +46,16 @@ class BiometricDevicesServiceProvider extends ServiceProvider
     {
         // Publish config
         $this->publishes([
-            __DIR__ . '/../config/biometric-devices.php' => config_path('biometric-devices.php'),
+            __DIR__.'/../config/biometric-devices.php' => config_path('biometric-devices.php'),
         ], 'biometric-devices-config');
 
         // Publish migrations
         $this->publishes([
-            __DIR__ . '/../database/migrations' => database_path('migrations'),
+            __DIR__.'/../database/migrations' => database_path('migrations'),
         ], 'biometric-devices-migrations');
 
         // Load migrations (auto-run when migrate command is executed)
-        $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
+        $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
 
         // Register commands
         if ($this->app->runningInConsole()) {
