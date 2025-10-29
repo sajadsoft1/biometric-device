@@ -35,7 +35,7 @@ readonly class AttendanceDTO
             'is_check_in'       => $this->isCheckIn,
             'device_serial'     => $this->deviceSerial,
             'event_type'        => $this->eventType?->value,
-            'event_type_label'  => $this->eventType?->description(),
+            'event_type_label'  => $this->eventType?->title(),
             'row_data'          => $this->rawData,
         ];
     }

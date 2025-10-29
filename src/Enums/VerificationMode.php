@@ -31,7 +31,7 @@ enum VerificationMode: string
     {
         return match ($this) {
             self::FINGERPRINT => 'Fingerprint',
-            self::FACE        => 'Face Recognition',
+            self::FACE        => 'Face',
             self::CARD        => 'Card',
             self::PASSWORD    => 'Password',
             self::PHOTO       => 'Photo',

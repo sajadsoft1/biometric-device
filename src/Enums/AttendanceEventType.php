@@ -6,29 +6,29 @@ namespace Sajadsoft\BiometricDevices\Enums;
 
 /**
  * Attendance Event Types
- * رویدادهای مختلف که در زمان ثبت حضور اتفاق می‌افتند
+ * Different events that occur when recording attendance
  */
 enum AttendanceEventType: int
 {
-    case NORMAL_PUNCH = 0;           // تردد عادی
-    case CHECK_IN     = 1;               // ورود
-    case CHECK_OUT    = 2;              // خروج
-    case BREAK_START  = 3;            // شروع استراحت
-    case BREAK_END    = 4;              // پایان استراحت
-    case OVERTIME_IN  = 5;            // شروع اضافه‌کاری
-    case OVERTIME_OUT = 6;           // پایان اضافه‌کاری
+    case NORMAL_PUNCH = 0;           // Normal Punch
+    case CHECK_IN     = 1;               // Check In
+    case CHECK_OUT    = 2;              // Check Out
+    case BREAK_START  = 3;            // Break Start
+    case BREAK_END    = 4;              // Break End
+    case OVERTIME_IN  = 5;            // Over Time In
+    case OVERTIME_OUT = 6;           // Over Time Out
 
-    /** Get description in Persian */
-    public function description(): string
+    /** Get title */
+    public function title(): string
     {
         return match ($this) {
-            self::NORMAL_PUNCH => 'تردد عادی',
-            self::CHECK_IN     => 'ورود',
-            self::CHECK_OUT    => 'خروج',
-            self::BREAK_START  => 'شروع استراحت',
-            self::BREAK_END    => 'پایان استراحت',
-            self::OVERTIME_IN  => 'شروع اضافه‌کاری',
-            self::OVERTIME_OUT => 'پایان اضافه‌کاری',
+            self::NORMAL_PUNCH => 'Normal Punch',
+            self::CHECK_IN     => 'Check In',
+            self::CHECK_OUT    => 'Check Out',
+            self::BREAK_START  => 'Break Start',
+            self::BREAK_END    => 'Break End',
+            self::OVERTIME_IN  => 'Over Time In',
+            self::OVERTIME_OUT => 'Over Time Out',
         };
     }
 
