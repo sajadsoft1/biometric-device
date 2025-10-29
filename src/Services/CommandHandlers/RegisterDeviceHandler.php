@@ -45,9 +45,20 @@ class RegisterDeviceHandler extends BaseCommandHandler
         // نکته: IP و Port بعداً توسط WebSocketDeviceDriver set می‌شوند
         // در این مرحله فقط device رو با اطلاعات پایه ذخیره می‌کنیم
 
-        return $deviceModel::updateOrCreate(
-            ['serial' => $serial],
-            [
+        $device = $deviceModel::where('serial', $serial)->first();
+        if ($device) {
+            $device->is_online         = true;
+            $device->last_connected_at = now();
+            // update extra attributes
+            $newExtraAttributes = array_merge($device->extra_attributes ?? [], [
+                'firmware_version' => $deviceInfoDTO->firmwareVersion,
+                'user_capacity'    => $deviceInfoDTO->userCapacity,
+                'log_capacity'     => $deviceInfoDTO->logCapacity,
+            ]);
+            $device->updateDeviceInfo($newExtraAttributes);
+        } else {
+            $device = $deviceModel::create([
+                'serial'            => $serial,
                 'name'              => $deviceInfoDTO->modelName,
                 'is_online'         => true,
                 'last_connected_at' => now(),
@@ -57,8 +68,10 @@ class RegisterDeviceHandler extends BaseCommandHandler
                     'log_capacity'     => $deviceInfoDTO->logCapacity,
                     'device_type'      => $deviceInfoDTO->deviceType ?? 'unknown',
                 ],
-            ]
-        );
+            ]);
+        }
+
+        return $device;
     }
 
     public function getCommandName(): string
