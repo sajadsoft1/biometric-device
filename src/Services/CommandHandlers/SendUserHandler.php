@@ -67,7 +67,9 @@ class SendUserHandler extends BaseCommandHandler
             ));
         }
 
-        return null;
+        // دستگاه منتظر پاسخ است - باید حتماً پاسخ بفرستیم
+        // وگرنه timeout می‌کند و reconnect می‌کند
+        return $this->buildResponse('senduser', true);
     }
 
     public function getCommandName(): string

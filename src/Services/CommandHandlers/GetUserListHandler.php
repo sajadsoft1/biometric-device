@@ -78,6 +78,8 @@ class GetUserListHandler extends BaseCommandHandler
             ];
         }
 
+        // وقتی دیگر رکوردی نیست، هیچ پاسخی لازم نیست
+        // دستگاه متوجه می‌شود که count=0 یعنی تمام
         return null;
     }
 

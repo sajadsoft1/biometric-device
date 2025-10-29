@@ -22,9 +22,15 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
 
     protected array $socketToSerial = []; // Map socket ID => serial number
 
+    protected array $messageBuffer = []; // Buffer for incomplete messages/frames
+
     protected float $lastPingTime;
 
     protected float $lastCommandCheckTime;
+
+    protected array $lastActivityTime = []; // Track last activity time for each socket
+
+    protected array $awaitingPong = []; // Track sockets waiting for pong response
 
     /** Start WebSocket server */
     public function start(string $host, int $port): void
@@ -90,6 +96,9 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
             return;
         }
 
+        // تنظیم socket به حالت non-blocking برای جلوگیری از block شدن در socket_read
+        socket_set_nonblock($clientSocket);
+
         socket_getpeername($clientSocket, $address, $port);
         $socketId = $this->getSocketId($clientSocket);
 
@@ -97,18 +106,37 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
 
         $this->sockets[]                    = $clientSocket;
         $this->handshakeComplete[$socketId] = false;
+        $this->lastActivityTime[$socketId]  = microtime(true);
     }
 
     /**
      * Handle socket activity (data received)
+     * Based on working reference implementation
      *
      * @throws JsonException
      */
     protected function handleSocketActivity($socket): void
     {
-        $frame = @socket_read($socket, 4096);
+        // Clear any previous errors before reading
+        socket_clear_error($socket);
+        
+        $frame = @socket_read($socket, 4096, PHP_BINARY_READ);
 
-        if ( ! $frame) {
+        // Check for actual disconnection vs no data available
+        if ($frame === false || $frame === '') {
+            $errorCode = socket_last_error($socket);
+            
+            // EAGAIN (11) or EWOULDBLOCK (10035 on Windows) means no data available, not disconnected
+            if ($errorCode === 11 || $errorCode === 10035 || $errorCode === 0) {
+                // No data available right now, but connection is still alive
+                socket_clear_error($socket);
+                
+                return;
+            }
+            
+            // Real disconnection occurred
+            $socketId = $this->getSocketId($socket);
+            $this->debug("Socket error detected: code={$errorCode} for {$socketId}");
             $this->handleDisconnection($socket);
 
             return;
@@ -127,35 +155,147 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
             return;
         }
 
-        // Decode frame
-        $payload = $this->decodeFrame($frame);
+        // Get existing buffer for this socket
+        $dataRec = $this->messageBuffer[$socketId] ?? '';
+        $dataLen = strlen($dataRec);
 
-        if ($payload === null) {
+        // Append new frame data to buffer
+        $size = strlen($frame);
+        $dataRec .= $frame;
+        $dataLen += $size;
+
+        $needLen = 2; // Frame header minimum size
+
+        // Process all complete frames in buffer
+        while ($dataLen > $needLen) {
+            // Parse frame header
+            $opcode        = ord($dataRec[0]) & 15;
+            $b2            = ord($dataRec[1]);
+            $mask          = ($b2 & 128) != 0;
+            $payloadLength = $b2 & 127;
+
+            // Calculate extended payload length size
+            if ($payloadLength === 126) {
+                $needLen += 2;
+            } elseif ($payloadLength > 126) {
+                $needLen += 8;
+            }
+
+            if ($dataLen < $needLen) {
+                break; // Need more data for header
+            }
+
+            $nDataPos = 2;
+
+            // Read extended payload length
+            if ($payloadLength === 126) {
+                $payloadLength = ord($dataRec[$nDataPos + 1]) + (ord($dataRec[$nDataPos]) << 8);
+                $nDataPos += 2;
+            } elseif ($payloadLength > 126) {
+                $payloadLength = ord($dataRec[$nDataPos + 7]) +
+                    (ord($dataRec[$nDataPos + 6]) << 8) +
+                    (ord($dataRec[$nDataPos + 5]) << 16) +
+                    (ord($dataRec[$nDataPos + 4]) << 24);
+                $nDataPos += 8;
+            }
+
+            // Validate payload length
+            if ($payloadLength < 0 || $payloadLength >= 1024 * 1024 * 2) {
+                $this->warn("Invalid payload length: {$payloadLength} from {$socketId}");
+
+                break;
+            }
+
+            // Calculate total frame size
+            $needLen += ($mask ? 4 : 0);
+            $needLen += $payloadLength;
+
+            if ($dataLen < $needLen) {
+                // Need more data for complete frame
+                break;
+            }
+
+            // Extract payload
+            $packet = '';
+            if ($mask) {
+                $maskPos = $nDataPos;
+                $nDataPos += 4;
+
+                for ($i = 0; $i < $payloadLength; $i++) {
+                    $packet .= ($dataRec[$i + $nDataPos] ^ $dataRec[$maskPos + $i % 4]);
+                }
+                $nDataPos += $payloadLength;
+            } else {
+                $packet = substr($dataRec, $nDataPos, $payloadLength);
+                $nDataPos += $payloadLength;
+            }
+
+            // Process complete frame
+            $this->processFrame($packet, $socket, $socketId, $opcode);
+
+            // Remove processed frame from buffer
+            if ($nDataPos === $dataLen) {
+                $dataRec = '';
+                $dataLen = 0;
+            } else {
+                $dataRec = substr($dataRec, $nDataPos, $dataLen - $nDataPos);
+                $dataLen -= $nDataPos;
+            }
+
+            $needLen = 2; // Reset for next frame
+        }
+
+        // Save remaining buffer
+        $this->messageBuffer[$socketId] = $dataRec;
+    }
+
+    /** Process a complete WebSocket frame */
+    protected function processFrame(string $packet, $socket, string $socketId, int $opcode): void
+    {
+        $this->lastActivityTime[$socketId] = microtime(true);
+
+        // Handle close frame (opcode 0x8)
+        if ($opcode == 8) {
+            // Send close frame back to gracefully close connection
+            $this->sendCloseFrame($socket);
+            $this->handleDisconnection($socket);
+
             return;
         }
 
-        // Handle ping
-        if (is_array($payload) && isset($payload['_ping'])) {
+        // Handle pong response (opcode 0xA)
+        if ($opcode == 10) {
+            // Device responded to our ping
+            unset($this->awaitingPong[$socketId]);
+
+            return;
+        }
+
+        // Handle ping from device
+        if ($opcode == 9) {
             $this->sendPong($socket);
 
             return;
         }
 
-        // Clean payload from control characters
-        $payload = $this->cleanPayload($payload);
-
-        // Parse JSON
-        try {
-            $data = json_decode($payload, true, 512, JSON_THROW_ON_ERROR);
-        } catch (JsonException $e) {
-            $this->warn("Invalid JSON from socket {$socketId}: {$e->getMessage()}");
-            $this->debug('Payload: ' . substr($payload, 0, 200));
+        // Only process text frames
+        if ($opcode != 1) {
+            $this->debug("Unknown opcode {$opcode} from {$socketId}");
 
             return;
         }
 
-        if ( ! $data) {
+        // Skip empty packets
+        if (empty($packet)) {
+            return;
+        }
+
+        // Parse JSON - simple approach like reference implementation
+        $data = json_decode($packet, true);
+
+        if ( ! is_array($data)) {
             $this->warn("Invalid JSON from socket {$socketId}");
+            $this->debug('Payload length: ' . strlen($packet));
 
             return;
         }
@@ -166,8 +306,33 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
 
         // ذخیره serial number برای این socket
         if (isset($data['sn'])) {
-            $this->socketToSerial[$socketId]   = $data['sn'];
-            $this->connectedDevices[$socketId] = $data['sn'];
+            $serialNumber = $data['sn'];
+
+            // بررسی اینکه آیا این serial number قبلاً با socket دیگری register شده
+            $oldSocketId = null;
+            foreach ($this->socketToSerial as $sid => $sn) {
+                if ($sn === $serialNumber && $sid !== $socketId) {
+                    $oldSocketId = $sid;
+
+                    break;
+                }
+            }
+
+            // اگر socket قدیمی پیدا شد، آن را close کن
+            if ($oldSocketId) {
+                $this->info("Device {$serialNumber} reconnected with new socket, closing old connection {$oldSocketId}");
+
+                foreach ($this->sockets as $sock) {
+                    if ($this->getSocketId($sock) === $oldSocketId && $sock !== $this->socket) {
+                        $this->handleDisconnection($sock);
+
+                        break;
+                    }
+                }
+            }
+
+            $this->socketToSerial[$socketId]   = $serialNumber;
+            $this->connectedDevices[$socketId] = $serialNumber;
         }
 
         // ارسال پاسخ
@@ -198,53 +363,6 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
         socket_write($socket, $response, strlen($response));
 
         return true;
-    }
-
-    /** Decode WebSocket frame */
-    protected function decodeFrame($frame): mixed
-    {
-        $opcode = ord($frame[0]) & 15;
-
-        if ($opcode == 9) {
-            return ['_ping' => true];
-        }
-
-        if ($opcode != 1) {
-            return null;
-        }
-
-        $b2            = ord($frame[1]);
-        $mask          = ($b2 & 128) != 0;
-        $payloadLength = $b2 & 127;
-        $dataPos       = 2;
-
-        if ($payloadLength === 126) {
-            $payloadLength = ord($frame[3]) + (ord($frame[2]) << 8);
-            $dataPos       = 4;
-        } elseif ($payloadLength > 126) {
-            $payloadLength = ord($frame[9]) + (ord($frame[8]) << 8) + (ord($frame[7]) << 16) + (ord($frame[6]) << 24);
-            $dataPos       = 10;
-        }
-
-        $packet = '';
-        if ($mask) {
-            $maskKey = substr($frame, $dataPos, 4);
-            $dataPos += 4;
-
-            $frameLength   = strlen($frame);
-            $availableData = $frameLength - $dataPos;
-            $actualLength  = min($payloadLength, $availableData);
-
-            for ($i = 0; $i < $actualLength; $i++) {
-                if (isset($frame[$i + $dataPos])) {
-                    $packet .= $frame[$i + $dataPos] ^ $maskKey[$i % 4];
-                }
-            }
-        } else {
-            $packet = substr($frame, $dataPos, $payloadLength);
-        }
-
-        return $packet;
     }
 
     /** Send the message to device */
@@ -307,23 +425,24 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
         socket_write($socket, $pong, strlen($pong));
     }
 
-    /** Clean payload from control characters */
-    protected function cleanPayload(string $payload): string
+    /** Send close frame */
+    protected function sendCloseFrame($socket): void
     {
-        // Remove null bytes and control characters (except tab, newline, carriage return)
-        $payload = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $payload);
-
-        // Remove UTF-8 BOM if present
-        $payload = str_replace("\xEF\xBB\xBF", '', $payload);
-
-        // Trim whitespace
-        return trim($payload);
+        // Close frame: opcode 0x8 with empty payload
+        $close = chr(0x88) . chr(0x00);
+        @socket_write($socket, $close, strlen($close));
     }
 
     /** Periodic tasks */
     protected function performPeriodicTasks(): void
     {
         $now = microtime(true);
+
+        // Check for dead connections (no pong response after ping)
+        $this->checkDeadConnections($now);
+
+        // Check for unregistered devices (handshake complete but no reg command)
+        $this->checkUnregisteredDevices($now);
 
         // Ping every 15 seconds
         if ($now - $this->lastPingTime > 15) {
@@ -342,6 +461,7 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
     protected function sendPingToAll(): void
     {
         $ping = chr(0x89) . chr(0x00);
+        $now  = microtime(true);
 
         foreach ($this->sockets as $socket) {
             if ($socket === $this->socket) {
@@ -350,8 +470,66 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
 
             $socketId = $this->getSocketId($socket);
 
-            if ($this->handshakeComplete[$socketId] ?? false) {
-                @socket_write($socket, $ping, strlen($ping));
+            // فقط به دستگاه‌هایی ping می‌فرستیم که:
+            // 1. Handshake کامل کرده‌اند
+            // 2. Register شده‌اند (serial number دارند)
+            if (($this->handshakeComplete[$socketId] ?? false) && isset($this->socketToSerial[$socketId])) {
+                $result = @socket_write($socket, $ping, strlen($ping));
+
+                if ($result !== false) {
+                    // Mark this socket as awaiting pong response
+                    $this->awaitingPong[$socketId] = $now;
+                }
+            }
+        }
+    }
+
+    /** Check for connections that haven't responded to ping */
+    protected function checkDeadConnections(float $now): void
+    {
+        $timeout = 30; // 30 seconds timeout for pong response
+
+        foreach ($this->awaitingPong as $socketId => $pingTime) {
+            if ($now - $pingTime > $timeout) {
+                // Device hasn't responded to ping - consider it dead
+                $this->warn("Connection timeout: {$socketId} (no pong received for {$timeout}s)");
+
+                // Find and disconnect this socket
+                foreach ($this->sockets as $socket) {
+                    if ($this->getSocketId($socket) === $socketId && $socket !== $this->socket) {
+                        $this->handleDisconnection($socket);
+
+                        break;
+                    }
+                }
+
+                unset($this->awaitingPong[$socketId]);
+            }
+        }
+    }
+
+    /** Check for devices that completed handshake but never registered */
+    protected function checkUnregisteredDevices(float $now): void
+    {
+        $registrationTimeout = 30; // 30 seconds to send reg command after handshake
+
+        foreach ($this->handshakeComplete as $socketId => $isComplete) {
+            // اگر handshake کامل شده اما هنوز reg نشده
+            if ($isComplete && ! isset($this->socketToSerial[$socketId])) {
+                $lastActivity = $this->lastActivityTime[$socketId] ?? 0;
+
+                if ($now - $lastActivity > $registrationTimeout) {
+                    $this->warn("Registration timeout: {$socketId} (no reg command for {$registrationTimeout}s)");
+
+                    // Find and disconnect this socket
+                    foreach ($this->sockets as $socket) {
+                        if ($this->getSocketId($socket) === $socketId && $socket !== $this->socket) {
+                            $this->handleDisconnection($socket);
+
+                            break;
+                        }
+                    }
+                }
             }
         }
     }
@@ -446,9 +624,14 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
 
         socket_close($socket);
 
-        // حذف از لیست sockets
+        // حذف از لیست sockets و پاکسازی bufferها
         $this->sockets = array_filter($this->sockets, fn ($s) => $s !== $socket);
-        unset($this->handshakeComplete[$socketId]);
+        unset(
+            $this->handshakeComplete[$socketId],
+            $this->messageBuffer[$socketId],
+            $this->lastActivityTime[$socketId],
+            $this->awaitingPong[$socketId]
+        );
     }
 
     /** علامت‌گذاری دستگاه به عنوان آفلاین */

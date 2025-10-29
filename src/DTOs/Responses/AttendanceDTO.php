@@ -36,7 +36,6 @@ readonly class AttendanceDTO
             'device_serial'     => $this->deviceSerial,
             'event_type'        => $this->eventType?->value,
             'event_type_label'  => $this->eventType?->title(),
-            'row_data'          => $this->rawData,
         ];
     }
 }
