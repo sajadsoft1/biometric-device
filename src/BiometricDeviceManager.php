@@ -37,7 +37,12 @@ class BiometricDeviceManager
     // User Management
     // ============================================
 
-    /** Send command to add user */
+    /**
+     * Send command to add user
+     *
+     * @param string     $deviceSerial شماره سریال دستگاه
+     * @param AddUserDTO $dto          اطلاعات کاربر شامل نام، نوع بیومتریک و داده‌های بیومتریک
+     */
     public function addUser(string $deviceSerial, AddUserDTO $dto): void
     {
         $command = $this->mapper->mapAddUserCommand($dto);
@@ -45,7 +50,13 @@ class BiometricDeviceManager
         $this->sendRawCommand($deviceSerial, 'setuserinfo', $command, $dto);
     }
 
-    /** Send command to delete user */
+    /**
+     * Send command to delete user
+     *
+     * @param string             $deviceSerial  شماره سریال دستگاه
+     * @param int                $employeeId    شناسه کاربر
+     * @param BiometricType|null $biometricType نوع بیومتریک برای حذف (null = حذف کامل کاربر)
+     */
     public function deleteUser(string $deviceSerial, int $employeeId, ?BiometricType $biometricType = null): void
     {
         $dto = new DTOs\Commands\DeleteUserDTO(
@@ -58,7 +69,12 @@ class BiometricDeviceManager
         $this->sendRawCommand($deviceSerial, 'deleteuser', $command, $dto);
     }
 
-    /** Send command to get user list */
+    /**
+     * Send command to get user list
+     *
+     * @param string $deviceSerial       شماره سریال دستگاه
+     * @param bool   $startFromBeginning شروع از ابتدا یا ادامه لیست قبلی
+     */
     public function getUserList(string $deviceSerial, bool $startFromBeginning = true): void
     {
         $command = [
@@ -69,7 +85,12 @@ class BiometricDeviceManager
         $this->sendRawCommand($deviceSerial, 'getuserlist', $command);
     }
 
-    /** Send command to get user info */
+    /**
+     * Send command to get user info
+     *
+     * @param string $deviceSerial شماره سریال دستگاه
+     * @param int    $employeeId   شناسه کاربر
+     */
     public function getUserInfo(string $deviceSerial, int $employeeId): void
     {
         $dto = new DTOs\Commands\GetUserInfoDTO(
@@ -81,11 +102,58 @@ class BiometricDeviceManager
         $this->sendRawCommand($deviceSerial, 'getuserinfo', $command, $dto);
     }
 
+    /**
+     * Set usernames in batch mode
+     *
+     * دستور setusername برای بروزرسانی دسته‌جمعی نام کاربران بدون تغییر اطلاعات بیومتریک
+     *
+     * @param string                                    $deviceSerial شماره سریال دستگاه
+     * @param array<array{enrollid: int, name: string}> $usernames    لیست کاربران با enrollid و name
+     *
+     * @example
+     * $usernames = [
+     *     ['enrollid' => 1, 'name' => 'علی احمدی'],
+     *     ['enrollid' => 2, 'name' => 'رضا محمدی'],
+     * ];
+     * BiometricDevice::setUsernames('DEVICE_001', $usernames);
+     */
+    public function setUsernames(string $deviceSerial, array $usernames): void
+    {
+        $command = [
+            'cmd'    => 'setusername',
+            'count'  => count($usernames),
+            'record' => array_map(fn ($item) => [
+                'enrollid' => $item['enrollid'],
+                'name'     => $item['name'],
+            ], $usernames),
+        ];
+
+        $this->sendRawCommand($deviceSerial, 'setusername', $command);
+    }
+
+    /**
+     * Clean all admin users from device
+     *
+     * ⚠️ این دستور خطرناک است و تمام کاربران با سطح دسترسی Admin را حذف می‌کند
+     *
+     * @param string $deviceSerial شماره سریال دستگاه
+     */
+    public function cleanAdmin(string $deviceSerial): void
+    {
+        $this->sendRawCommand($deviceSerial, 'cleanadmin', ['cmd' => 'cleanadmin']);
+    }
+
     // ============================================
     // Device Control
     // ============================================
 
-    /** Send command to open door */
+    /**
+     * Send command to open door
+     *
+     * @param string $deviceSerial شماره سریال دستگاه
+     * @param int    $doorNumber   شماره درب (برای دستگاه‌های چند دربه)
+     * @param int    $duration     مدت زمان باز ماندن درب به ثانیه
+     */
     public function openDoor(string $deviceSerial, int $doorNumber = 1, int $duration = 5): void
     {
         $dto = new DTOs\Commands\OpenDoorDTO(
@@ -98,25 +166,47 @@ class BiometricDeviceManager
         $this->sendRawCommand($deviceSerial, 'opendoor', $command, $dto);
     }
 
-    /** Send command to get device info */
+    /**
+     * Send command to get device info
+     *
+     * @param string $deviceSerial شماره سریال دستگاه
+     */
     public function getDeviceInfo(string $deviceSerial): void
     {
         $this->sendRawCommand($deviceSerial, 'getdevinfo', ['cmd' => 'getdevinfo']);
     }
 
-    /** Reboot device */
+    /**
+     * Reboot device
+     *
+     * ⚠️ دستگاه بلافاصله restart می‌شود و پاسخی ارسال نمی‌کند
+     *
+     * @param string $deviceSerial شماره سریال دستگاه
+     */
     public function reboot(string $deviceSerial): void
     {
         $this->sendRawCommand($deviceSerial, 'reboot', ['cmd' => 'reboot']);
     }
 
-    /** Initialize system (WARNING: deletes all data) */
+    /**
+     * Initialize system (Factory Reset)
+     *
+     * ⚠️ این دستور خطرناک است و تمام داده‌های دستگاه را پاک می‌کند
+     * (کاربران، لاگ‌ها، تنظیمات و...)
+     *
+     * @param string $deviceSerial شماره سریال دستگاه
+     */
     public function initSystem(string $deviceSerial): void
     {
         $this->sendRawCommand($deviceSerial, 'initsys', ['cmd' => 'initsys']);
     }
 
-    /** Set device time */
+    /**
+     * Set device time
+     *
+     * @param string         $deviceSerial شماره سریال دستگاه
+     * @param \Carbon\Carbon $datetime     زمان جدید برای تنظیم
+     */
     public function setTime(string $deviceSerial, \Carbon\Carbon $datetime): void
     {
         $dto = new DTOs\Commands\SetTimeDTO(
@@ -132,7 +222,14 @@ class BiometricDeviceManager
     // Access Control
     // ============================================
 
-    /** Set user access permissions */
+    /**
+     * Set user access permissions
+     *
+     * تنظیم دسترسی زمان‌بندی شده برای کاربر (Time Zone، Week Schedule)
+     *
+     * @param string           $deviceSerial شماره سریال دستگاه
+     * @param SetUserAccessDTO $dto          اطلاعات دسترسی شامل employeeId، weekZone، group، startDate، endDate
+     */
     public function setUserAccess(string $deviceSerial, SetUserAccessDTO $dto): void
     {
         $command = $this->mapper->mapSetUserAccessCommand($dto);
@@ -140,7 +237,14 @@ class BiometricDeviceManager
         $this->sendRawCommand($deviceSerial, 'setuserlock', $command, $dto);
     }
 
-    /** Set device lock status */
+    /**
+     * Set device lock status
+     *
+     * قفل یا باز کردن دستگاه (وقتی قفل باشد هیچ کاربری نمی‌تواند تردد کند)
+     *
+     * @param string $deviceSerial شماره سریال دستگاه
+     * @param bool   $locked       true = قفل، false = باز
+     */
     public function setDeviceLock(string $deviceSerial, bool $locked): void
     {
         $dto = new DTOs\Commands\SetDeviceLockDTO(
@@ -156,7 +260,12 @@ class BiometricDeviceManager
     // Attendance Logs
     // ============================================
 
-    /** Get all attendance logs from device */
+    /**
+     * Get all attendance logs from device
+     *
+     * @param string $deviceSerial       شماره سریال دستگاه
+     * @param bool   $startFromBeginning شروع از ابتدا یا ادامه لیست قبلی
+     */
     public function getAllLogs(string $deviceSerial, bool $startFromBeginning = true): void
     {
         $dto = new DTOs\Commands\GetLogsDTO(
@@ -169,7 +278,14 @@ class BiometricDeviceManager
         $this->sendRawCommand($deviceSerial, 'getalllog', $command, $dto);
     }
 
-    /** Get new attendance logs from device */
+    /**
+     * Get new attendance logs from device
+     *
+     * فقط لاگ‌های جدید که هنوز دریافت نشده‌اند
+     *
+     * @param string $deviceSerial       شماره سریال دستگاه
+     * @param bool   $startFromBeginning شروع از ابتدا یا ادامه لیست قبلی
+     */
     public function getNewLogs(string $deviceSerial, bool $startFromBeginning = true): void
     {
         $dto = new DTOs\Commands\GetLogsDTO(
@@ -180,6 +296,18 @@ class BiometricDeviceManager
         $command = $this->mapper->mapGetLogsCommand($dto, 'getnewlog');
 
         $this->sendRawCommand($deviceSerial, 'getnewlog', $command, $dto);
+    }
+
+    /**
+     * Clean all attendance logs from device
+     *
+     * ⚠️ این دستور تمام لاگ‌های حضور و غیاب را از دستگاه پاک می‌کند
+     *
+     * @param string $deviceSerial شماره سریال دستگاه
+     */
+    public function cleanLog(string $deviceSerial): void
+    {
+        $this->sendRawCommand($deviceSerial, 'cleanlog', ['cmd' => 'cleanlog']);
     }
 
     /**

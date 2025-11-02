@@ -13,15 +13,15 @@ use Sajadsoft\BiometricDevices\Services\DeviceDrivers\WebSocketDeviceDriver;
  */
 class StartBiometricServerCommand extends Command
 {
-    protected $signature = 'biometric:start-server {--driver=websocket} {--port=7788} {--host=0.0.0.0}';
+    protected $signature = 'biometric:start-server {--driver=} {--port=} {--host=}';
 
     protected $description = 'Start biometric device communication server';
 
     public function handle(): int
     {
-        $driver = $this->option('driver');
-        $host   = $this->option('host');
-        $port   = $this->option('port');
+        $driver = $this->option('driver') ?: config('biometric-devices.default_driver', 'websocket');
+        $host   = $this->option('host') ?: config('biometric-devices.websocket.host', '0.0.0.0');
+        $port   = (int) ($this->option('port') ?: config('biometric-devices.websocket.port', 7788));
 
         $this->info('Starting biometric server...');
         $this->info("Driver: {$driver}");
