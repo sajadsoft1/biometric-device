@@ -7,6 +7,7 @@ namespace Sajadsoft\BiometricDevices;
 use Illuminate\Contracts\Foundation\Application;
 use Sajadsoft\BiometricDevices\Contracts\DataMapperInterface;
 use Sajadsoft\BiometricDevices\DTOs\Commands\AddUserDTO;
+use Sajadsoft\BiometricDevices\DTOs\Commands\GetUserInfoDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\SetUserAccessDTO;
 use Sajadsoft\BiometricDevices\Enums\BiometricType;
 use Sajadsoft\BiometricDevices\Enums\DeviceCommandStatusEnum;
@@ -88,13 +89,15 @@ class BiometricDeviceManager
     /**
      * Send command to get user info
      *
-     * @param string $deviceSerial شماره سریال دستگاه
-     * @param int    $employeeId   شناسه کاربر
+     * @param string             $deviceSerial  شماره سریال دستگاه
+     * @param int                $employeeId    شناسه کاربر
+     * @param BiometricType|null $biometricType نوع بیومتریک (null = همه نوع‌ها)
      */
-    public function getUserInfo(string $deviceSerial, int $employeeId): void
+    public function getUserInfo(string $deviceSerial, int $employeeId, ?BiometricType $biometricType): void
     {
-        $dto = new DTOs\Commands\GetUserInfoDTO(
-            employeeId: $employeeId
+        $dto = new GetUserInfoDTO(
+            employeeId: $employeeId,
+            biometricType: $biometricType
         );
 
         $command = $this->mapper->mapGetUserInfoCommand($dto);

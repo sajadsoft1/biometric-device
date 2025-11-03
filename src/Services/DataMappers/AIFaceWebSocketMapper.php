@@ -8,6 +8,11 @@ use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Arr;
 use Sajadsoft\BiometricDevices\DTOs\Commands\AddUserDTO;
+use Sajadsoft\BiometricDevices\DTOs\Commands\GetLogsDTO;
+use Sajadsoft\BiometricDevices\DTOs\Commands\GetUserInfoDTO;
+use Sajadsoft\BiometricDevices\DTOs\Commands\OpenDoorDTO;
+use Sajadsoft\BiometricDevices\DTOs\Commands\SetDeviceLockDTO;
+use Sajadsoft\BiometricDevices\DTOs\Commands\SetTimeDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\SetUserAccessDTO;
 use Sajadsoft\BiometricDevices\DTOs\Responses\AttendanceDTO;
 use Sajadsoft\BiometricDevices\DTOs\Responses\DeviceInfoDTO;
@@ -229,8 +234,8 @@ class AIFaceWebSocketMapper extends AbstractDataMapper
             'admin'     => $dto->isAdmin ? 1 : 0,
         ];
 
-        // For password and card, record is numeric
-        if ($backupNum == 10 || $backupNum == 11) {
+        // For the password and card, record is numeric
+        if ($backupNum === 10 || $backupNum === 11) {
             $command['record'] = (int) $dto->biometricData;
         } else {
             $command['record'] = $dto->biometricData;
@@ -247,23 +252,24 @@ class AIFaceWebSocketMapper extends AbstractDataMapper
         ];
 
         // If biometric type is specified, delete only that type
-        // Otherwise, 13 = delete all biometric data
+        // Otherwise, 13 = delete all biometric data.
         $command['backupnum'] = $dto->biometricType?->value ?? 13;
 
         return $command;
     }
 
-    public function mapGetUserInfoCommand(\Sajadsoft\BiometricDevices\DTOs\Commands\GetUserInfoDTO $dto): array
+    public function mapGetUserInfoCommand(GetUserInfoDTO $dto): array
     {
         return [
-            'cmd'      => 'getuserinfo',
-            'enrollid' => $dto->employeeId,
+            'cmd'       => 'getuserinfo',
+            'enrollid'  => $dto->employeeId,
+            'backupnum' => $dto->biometricType?->value ?? null,
         ];
     }
 
     // Device Control
 
-    public function mapOpenDoorCommand(\Sajadsoft\BiometricDevices\DTOs\Commands\OpenDoorDTO $dto): array
+    public function mapOpenDoorCommand(OpenDoorDTO $dto): array
     {
         return [
             'cmd'      => 'opendoor',
@@ -272,7 +278,7 @@ class AIFaceWebSocketMapper extends AbstractDataMapper
         ];
     }
 
-    public function mapSetTimeCommand(\Sajadsoft\BiometricDevices\DTOs\Commands\SetTimeDTO $dto): array
+    public function mapSetTimeCommand(SetTimeDTO $dto): array
     {
         return [
             'cmd'  => 'settime',
@@ -299,7 +305,7 @@ class AIFaceWebSocketMapper extends AbstractDataMapper
         ];
     }
 
-    public function mapSetDeviceLockCommand(\Sajadsoft\BiometricDevices\DTOs\Commands\SetDeviceLockDTO $dto): array
+    public function mapSetDeviceLockCommand(SetDeviceLockDTO $dto): array
     {
         return [
             'cmd'    => 'setdevlock',
@@ -309,7 +315,7 @@ class AIFaceWebSocketMapper extends AbstractDataMapper
 
     // Attendance Logs
 
-    public function mapGetLogsCommand(\Sajadsoft\BiometricDevices\DTOs\Commands\GetLogsDTO $dto, string $commandName): array
+    public function mapGetLogsCommand(GetLogsDTO $dto, string $commandName): array
     {
         return [
             'cmd' => $commandName, // 'getalllog' or 'getnewlog'
@@ -330,7 +336,7 @@ class AIFaceWebSocketMapper extends AbstractDataMapper
             }
 
             return Carbon::parse($time);
-        } catch (Exception $e) {
+        } catch (Exception) {
             return now();
         }
     }

@@ -9,25 +9,25 @@ use Sajadsoft\BiometricDevices\Enums\BiometricType;
 /**
  * Complete user information with biometric data from device
  */
-class UserDTO
+readonly class UserDTO
 {
     public function __construct(
-        public readonly int $employeeId,
-        public readonly string $name,
-        public readonly bool $isAdmin,
-        public readonly BiometricType $biometricType,
-        public readonly ?string $biometricData,
-        public readonly string $deviceSerial,
-        public readonly ?int $cardNumber,
-        public readonly ?int $password,
-        public readonly bool $enabled,
-        public readonly ?int $shiftId,
-        public readonly ?string $department,
-        public readonly ?string $photoUrl,
-        public readonly ?int $fingerprintFlag,
-        public readonly ?int $fingerprintCount,
-        public readonly ?int $faceFlag,
-        public readonly array $rawData,
+        public int $employeeId,
+        public string $name,
+        public bool $isAdmin,
+        public BiometricType $biometricType,
+        public ?string $biometricData,
+        public string $deviceSerial,
+        public ?int $cardNumber,
+        public ?int $password,
+        public bool $enabled,
+        public ?int $shiftId,
+        public ?string $department,
+        public ?string $photoUrl,
+        public ?int $fingerprintFlag,
+        public ?int $fingerprintCount,
+        public ?int $faceFlag,
+        public array $rawData,
     ) {}
 
     public function toArray(): array
@@ -38,6 +38,7 @@ class UserDTO
             'is_admin'           => $this->isAdmin,
             'biometric_type'     => $this->biometricType->value,
             'has_biometric_data' => ! empty($this->biometricData),
+            'biometric_data'     => $this->biometricData,
             'device_serial'      => $this->deviceSerial,
             'card_number'        => $this->cardNumber,
             'password'           => $this->password,

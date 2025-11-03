@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Sajadsoft\BiometricDevices\Support;
 
 use Illuminate\Support\Facades\Log;
+use JsonException;
 
 class Logger
 {
@@ -19,7 +20,10 @@ class Logger
             return;
         }
 
-        Log::channel(self::getChannel())->debug("Biometric: {$message}" . '  :' . json_encode($context, JSON_THROW_ON_ERROR|JSON_PRETTY_PRINT));
+        try {
+            Log::channel(self::getChannel())->debug("Biometric: {$message}" . '  :' . json_encode($context, JSON_THROW_ON_ERROR|JSON_PRETTY_PRINT));
+        } catch (JsonException) {
+        }
     }
 
     /**
@@ -33,7 +37,10 @@ class Logger
             return;
         }
 
-        Log::channel(self::getChannel())->info("Biometric: {$message}" . '  :' . json_encode($context, JSON_THROW_ON_ERROR|JSON_PRETTY_PRINT));
+        try {
+            Log::channel(self::getChannel())->info("Biometric: {$message}" . '  :' . json_encode($context, JSON_THROW_ON_ERROR|JSON_PRETTY_PRINT));
+        } catch (JsonException) {
+        }
     }
 
     /**
@@ -47,7 +54,10 @@ class Logger
             return;
         }
 
-        Log::channel(self::getChannel())->warning("Biometric: {$message}" . '  :' . json_encode($context, JSON_THROW_ON_ERROR|JSON_PRETTY_PRINT));
+        try {
+            Log::channel(self::getChannel())->warning("Biometric: {$message}" . '  :' . json_encode($context, JSON_THROW_ON_ERROR|JSON_PRETTY_PRINT));
+        } catch (JsonException) {
+        }
     }
 
     /**
@@ -61,10 +71,13 @@ class Logger
             return;
         }
 
-        Log::channel(self::getChannel())->error("Biometric: {$message}" . '  :' . json_encode($context, JSON_THROW_ON_ERROR|JSON_PRETTY_PRINT));
+        try {
+            Log::channel(self::getChannel())->error("Biometric: {$message}" . '  :' . json_encode($context, JSON_THROW_ON_ERROR|JSON_PRETTY_PRINT));
+        } catch (JsonException) {
+        }
     }
 
-    /** Check if logging is enabled in config. */
+    /** Check if logging is enabled in the config. */
     private static function isEnabled(): bool
     {
         return (bool) config('biometric-devices.logging.enabled', false);

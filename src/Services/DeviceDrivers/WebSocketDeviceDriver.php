@@ -7,6 +7,17 @@ namespace Sajadsoft\BiometricDevices\Services\DeviceDrivers;
 use Exception;
 use JsonException;
 use RuntimeException;
+use Sajadsoft\BiometricDevices\Contracts\DataMapperInterface;
+use Sajadsoft\BiometricDevices\DTOs\Commands\AddUserDTO;
+use Sajadsoft\BiometricDevices\DTOs\Commands\DeleteUserDTO;
+use Sajadsoft\BiometricDevices\DTOs\Commands\GetLogsDTO;
+use Sajadsoft\BiometricDevices\DTOs\Commands\GetUserInfoDTO;
+use Sajadsoft\BiometricDevices\DTOs\Commands\OpenDoorDTO;
+use Sajadsoft\BiometricDevices\DTOs\Commands\SetDeviceLockDTO;
+use Sajadsoft\BiometricDevices\DTOs\Commands\SetTimeDTO;
+use Sajadsoft\BiometricDevices\DTOs\Commands\SetUserAccessDTO;
+use Sajadsoft\BiometricDevices\Enums\DeviceCommandStatusEnum;
+use Sajadsoft\BiometricDevices\Events\DeviceDisconnected;
 use Sajadsoft\BiometricDevices\Support\Logger;
 
 /**
@@ -14,7 +25,7 @@ use Sajadsoft\BiometricDevices\Support\Logger;
  */
 class WebSocketDeviceDriver extends AbstractDeviceDriver
 {
-    protected $socket;
+    protected mixed $socket;
 
     protected array $sockets = [];
 
@@ -112,28 +123,27 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
     /**
      * Handle socket activity (data received)
      * Based on working reference implementation
-     *
      * @throws JsonException
      */
     protected function handleSocketActivity($socket): void
     {
         // Clear any previous errors before reading
         socket_clear_error($socket);
-        
-        $frame = @socket_read($socket, 4096, PHP_BINARY_READ);
+
+        $frame = @socket_read($socket, 4096);
 
         // Check for actual disconnection vs no data available
         if ($frame === false || $frame === '') {
             $errorCode = socket_last_error($socket);
-            
-            // EAGAIN (11) or EWOULDBLOCK (10035 on Windows) means no data available, not disconnected
-            if ($errorCode === 11 || $errorCode === 10035 || $errorCode === 0) {
+
+            // EAGAIN (11) or EWOULDBLOCK (10035 on Windows) means no data available, not disconnected.
+            if (in_array($errorCode, [], true)) {
                 // No data available right now, but connection is still alive
                 socket_clear_error($socket);
-                
+
                 return;
             }
-            
+
             // Real disconnection occurred
             $socketId = $this->getSocketId($socket);
             $this->debug("Socket error detected: code={$errorCode} for {$socketId}");
@@ -171,7 +181,7 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
             // Parse frame header
             $opcode        = ord($dataRec[0]) & 15;
             $b2            = ord($dataRec[1]);
-            $mask          = ($b2 & 128) != 0;
+            $mask          = ($b2 & 128) !== 0;
             $payloadLength = $b2 & 127;
 
             // Calculate extended payload length size
@@ -224,11 +234,10 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
                 for ($i = 0; $i < $payloadLength; $i++) {
                     $packet .= ($dataRec[$i + $nDataPos] ^ $dataRec[$maskPos + $i % 4]);
                 }
-                $nDataPos += $payloadLength;
             } else {
                 $packet = substr($dataRec, $nDataPos, $payloadLength);
-                $nDataPos += $payloadLength;
             }
+            $nDataPos += $payloadLength;
 
             // Process complete frame
             $this->processFrame($packet, $socket, $socketId, $opcode);
@@ -249,13 +258,15 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
         $this->messageBuffer[$socketId] = $dataRec;
     }
 
-    /** Process a complete WebSocket frame */
+    /** Process a complete WebSocket frame
+     * @throws JsonException
+     */
     protected function processFrame(string $packet, $socket, string $socketId, int $opcode): void
     {
         $this->lastActivityTime[$socketId] = microtime(true);
 
         // Handle close frame (opcode 0x8)
-        if ($opcode == 8) {
+        if ($opcode === 8) {
             // Send close frame back to gracefully close connection
             $this->sendCloseFrame($socket);
             $this->handleDisconnection($socket);
@@ -264,7 +275,7 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
         }
 
         // Handle pong response (opcode 0xA)
-        if ($opcode == 10) {
+        if ($opcode === 10) {
             // Device responded to our ping
             unset($this->awaitingPong[$socketId]);
 
@@ -272,14 +283,14 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
         }
 
         // Handle ping from device
-        if ($opcode == 9) {
+        if ($opcode === 9) {
             $this->sendPong($socket);
 
             return;
         }
 
         // Only process text frames
-        if ($opcode != 1) {
+        if ($opcode !== 1) {
             $this->debug("Unknown opcode {$opcode} from {$socketId}");
 
             return;
@@ -290,8 +301,8 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
             return;
         }
 
-        // Parse JSON - simple approach like reference implementation
-        $data = json_decode($packet, true);
+        // Parse JSON: simple approach like reference implementation
+        $data = json_decode($packet, true, 512, JSON_THROW_ON_ERROR);
 
         if ( ! is_array($data)) {
             $this->warn("Invalid JSON from socket {$socketId}");
@@ -365,10 +376,12 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
         return true;
     }
 
-    /** Send the message to device */
+    /** Send the message to device
+     * @throws JsonException
+     */
     public function sendMessage($socket, array $message): void
     {
-        $json      = json_encode($message);
+        $json      = json_encode($message, JSON_THROW_ON_ERROR);
         $length    = strlen($json);
         $firstByte = 0x81; // Text frame
 
@@ -387,14 +400,14 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
     /** Find socket by device serial */
     protected function findSocketBySerial(string $serial): mixed
     {
-        $socketId = array_search($serial, $this->socketToSerial);
+        $socketId = array_search($serial, $this->socketToSerial, true);
 
         if ($socketId === false) {
             return null;
         }
 
         foreach ($this->sockets as $socket) {
-            if ($this->getSocketId($socket) == $socketId) {
+            if ($this->getSocketId($socket) === $socketId) {
                 return $socket;
             }
         }
@@ -410,7 +423,7 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
 
         try {
             @socket_getpeername($socket, $address, $port);
-        } catch (Exception $e) {
+        } catch (Exception) {
             // اگر نتونست peer name بگیره، از resource ID استفاده می‌کنیم
             return 'socket_' . (int) $socket;
         }
@@ -428,17 +441,19 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
     /** Send close frame */
     protected function sendCloseFrame($socket): void
     {
-        // Close frame: opcode 0x8 with empty payload
+        // Close frame: opcode `0×8` with empty payload
         $close = chr(0x88) . chr(0x00);
         @socket_write($socket, $close, strlen($close));
     }
 
-    /** Periodic tasks */
+    /** Periodic tasks
+     * @throws JsonException
+     */
     protected function performPeriodicTasks(): void
     {
         $now = microtime(true);
 
-        // Check for dead connections (no pong response after ping)
+        // Check for dead connections (no pong response after the ping)
         $this->checkDeadConnections($now);
 
         // Check for unregistered devices (handshake complete but no reg command)
@@ -457,7 +472,7 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
         }
     }
 
-    /** Send ping to all connected devices */
+    /** Send a ping to all connected devices */
     protected function sendPingToAll(): void
     {
         $ping = chr(0x89) . chr(0x00);
@@ -491,7 +506,7 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
 
         foreach ($this->awaitingPong as $socketId => $pingTime) {
             if ($now - $pingTime > $timeout) {
-                // Device hasn't responded to ping - consider it dead
+                // Device hasn't responded to ping: consider it dead
                 $this->warn("Connection timeout: {$socketId} (no pong received for {$timeout}s)");
 
                 // Find and disconnect this socket
@@ -534,7 +549,9 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
         }
     }
 
-    /** Check for pending commands and send them */
+    /** Check for pending commands and send them
+     * @throws JsonException
+     */
     protected function checkPendingCommands(): void
     {
         $commandModel = config('biometric-devices.models.device_command');
@@ -544,10 +561,10 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
             return;
         }
 
-        // دریافت دستورات pending از دیتابیس
+        // دریافت دستورها pending از دیتابیس
         $commands = $commandModel::query()
             ->with('device:id,serial')
-            ->where('status', \Sajadsoft\BiometricDevices\Enums\DeviceCommandStatusEnum::PENDING)
+            ->where('status', DeviceCommandStatusEnum::PENDING)
             ->where('send_status', false)
             ->orderBy('id')
             ->limit(10)
@@ -558,7 +575,9 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
         }
     }
 
-    /** Send command from database record */
+    /** Send command from database record
+     * @throws JsonException
+     */
     protected function sendCommandFromDatabase($command): void
     {
         $device = $command->device;
@@ -581,7 +600,7 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
         }
 
         // آماده‌سازی params
-        $params = json_decode($command->command_content, true) ?? [];
+        $params = json_decode($command->command_content, true, 512, JSON_THROW_ON_ERROR) ?? [];
 
         // ارسال
         $sent = $this->sendRawCommand(
@@ -612,7 +631,7 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
             $this->markDeviceAsOffline($serialNum);
 
             // پخش Event - برای اطلاع‌رسانی و پردازش‌های اضافی
-            event(new \Sajadsoft\BiometricDevices\Events\DeviceDisconnected(
+            event(new DeviceDisconnected(
                 $serialNum,
                 now()
             ));
@@ -676,19 +695,17 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
     // ============================================
 
     /** Send add user command */
-    public function sendAddUser(string $deviceSerial, \Sajadsoft\BiometricDevices\DTOs\Commands\AddUserDTO $dto): bool
+    public function sendAddUser(string $deviceSerial, AddUserDTO $dto): bool
     {
-        $mapper  = app(\Sajadsoft\BiometricDevices\Contracts\DataMapperInterface::class);
-        $command = $mapper->mapAddUserCommand($dto);
+        $command = app(DataMapperInterface::class)->mapAddUserCommand($dto);
 
         return $this->sendRawCommand($deviceSerial, 'setuserinfo', $command);
     }
 
     /** Send delete user command */
-    public function sendDeleteUser(string $deviceSerial, \Sajadsoft\BiometricDevices\DTOs\Commands\DeleteUserDTO $dto): bool
+    public function sendDeleteUser(string $deviceSerial, DeleteUserDTO $dto): bool
     {
-        $mapper  = app(\Sajadsoft\BiometricDevices\Contracts\DataMapperInterface::class);
-        $command = $mapper->mapDeleteUserCommand($dto);
+        $command = app(DataMapperInterface::class)->mapDeleteUserCommand($dto);
 
         return $this->sendRawCommand($deviceSerial, 'deleteuser', $command);
     }
@@ -705,10 +722,9 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
     }
 
     /** Send get user info command */
-    public function sendGetUserInfo(string $deviceSerial, \Sajadsoft\BiometricDevices\DTOs\Commands\GetUserInfoDTO $dto): bool
+    public function sendGetUserInfo(string $deviceSerial, GetUserInfoDTO $dto): bool
     {
-        $mapper  = app(\Sajadsoft\BiometricDevices\Contracts\DataMapperInterface::class);
-        $command = $mapper->mapGetUserInfoCommand($dto);
+        $command = app(DataMapperInterface::class)->mapGetUserInfoCommand($dto);
 
         return $this->sendRawCommand($deviceSerial, 'getuserinfo', $command);
     }
@@ -718,10 +734,9 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
     // ============================================
 
     /** Send open door command */
-    public function sendOpenDoor(string $deviceSerial, \Sajadsoft\BiometricDevices\DTOs\Commands\OpenDoorDTO $dto): bool
+    public function sendOpenDoor(string $deviceSerial, OpenDoorDTO $dto): bool
     {
-        $mapper  = app(\Sajadsoft\BiometricDevices\Contracts\DataMapperInterface::class);
-        $command = $mapper->mapOpenDoorCommand($dto);
+        $command = app(DataMapperInterface::class)->mapOpenDoorCommand($dto);
 
         return $this->sendRawCommand($deviceSerial, 'opendoor', $command);
     }
@@ -757,10 +772,9 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
     }
 
     /** Send set time command */
-    public function sendSetTime(string $deviceSerial, \Sajadsoft\BiometricDevices\DTOs\Commands\SetTimeDTO $dto): bool
+    public function sendSetTime(string $deviceSerial, SetTimeDTO $dto): bool
     {
-        $mapper  = app(\Sajadsoft\BiometricDevices\Contracts\DataMapperInterface::class);
-        $command = $mapper->mapSetTimeCommand($dto);
+        $command = app(DataMapperInterface::class)->mapSetTimeCommand($dto);
 
         return $this->sendRawCommand($deviceSerial, 'settime', $command);
     }
@@ -770,19 +784,17 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
     // ============================================
 
     /** Send set user access command */
-    public function sendSetUserAccess(string $deviceSerial, \Sajadsoft\BiometricDevices\DTOs\Commands\SetUserAccessDTO $dto): bool
+    public function sendSetUserAccess(string $deviceSerial, SetUserAccessDTO $dto): bool
     {
-        $mapper  = app(\Sajadsoft\BiometricDevices\Contracts\DataMapperInterface::class);
-        $command = $mapper->mapSetUserAccessCommand($dto);
+        $command = app(DataMapperInterface::class)->mapSetUserAccessCommand($dto);
 
         return $this->sendRawCommand($deviceSerial, 'setuserlock', $command);
     }
 
     /** Send set device lock command */
-    public function sendSetDeviceLock(string $deviceSerial, \Sajadsoft\BiometricDevices\DTOs\Commands\SetDeviceLockDTO $dto): bool
+    public function sendSetDeviceLock(string $deviceSerial, SetDeviceLockDTO $dto): bool
     {
-        $mapper  = app(\Sajadsoft\BiometricDevices\Contracts\DataMapperInterface::class);
-        $command = $mapper->mapSetDeviceLockCommand($dto);
+        $command = app(DataMapperInterface::class)->mapSetDeviceLockCommand($dto);
 
         return $this->sendRawCommand($deviceSerial, 'setdevlock', $command);
     }
@@ -792,19 +804,17 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
     // ============================================
 
     /** Send get all logs command */
-    public function sendGetAllLogs(string $deviceSerial, \Sajadsoft\BiometricDevices\DTOs\Commands\GetLogsDTO $dto): bool
+    public function sendGetAllLogs(string $deviceSerial, GetLogsDTO $dto): bool
     {
-        $mapper  = app(\Sajadsoft\BiometricDevices\Contracts\DataMapperInterface::class);
-        $command = $mapper->mapGetLogsCommand($dto, 'getalllog');
+        $command = app(DataMapperInterface::class)->mapGetLogsCommand($dto, 'getalllog');
 
         return $this->sendRawCommand($deviceSerial, 'getalllog', $command);
     }
 
-    /** Send get new logs command */
-    public function sendGetNewLogs(string $deviceSerial, \Sajadsoft\BiometricDevices\DTOs\Commands\GetLogsDTO $dto): bool
+    /** Send the get new logs command */
+    public function sendGetNewLogs(string $deviceSerial, GetLogsDTO $dto): bool
     {
-        $mapper  = app(\Sajadsoft\BiometricDevices\Contracts\DataMapperInterface::class);
-        $command = $mapper->mapGetLogsCommand($dto, 'getnewlog');
+        $command = app(DataMapperInterface::class)->mapGetLogsCommand($dto, 'getnewlog');
 
         return $this->sendRawCommand($deviceSerial, 'getnewlog', $command);
     }
@@ -813,14 +823,7 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
     public function sendRawCommand(string $deviceSerial, string $commandName, array $params): bool
     {
         // پیدا کردن socket دستگاه
-        $socketId = null;
-        foreach ($this->connectedDevices as $sid => $serial) {
-            if ($serial === $deviceSerial) {
-                $socketId = $sid;
-
-                break;
-            }
-        }
+        $socketId = array_search($deviceSerial, $this->connectedDevices, true);
 
         if ( ! $socketId) {
             Logger::debug("Device not connected: {$deviceSerial}");

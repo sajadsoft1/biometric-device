@@ -9,11 +9,11 @@ use Sajadsoft\BiometricDevices\Enums\BiometricType;
 /**
  * Command to delete user from device
  */
-class DeleteUserDTO
+readonly class DeleteUserDTO
 {
     public function __construct(
-        public readonly int $employeeId,
-        public readonly ?BiometricType $biometricType = null, // null = delete all
+        public int $employeeId,
+        public ?BiometricType $biometricType = null, // null = delete all
     ) {}
 
     public function toArray(): array
