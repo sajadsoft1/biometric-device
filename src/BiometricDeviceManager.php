@@ -7,6 +7,7 @@ namespace Sajadsoft\BiometricDevices;
 use Illuminate\Contracts\Foundation\Application;
 use Sajadsoft\BiometricDevices\Contracts\DataMapperInterface;
 use Sajadsoft\BiometricDevices\DTOs\Commands\AddUserDTO;
+use Sajadsoft\BiometricDevices\DTOs\Commands\EnrollFingerprintDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\GetUserInfoDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\SetUserAccessDTO;
 use Sajadsoft\BiometricDevices\Enums\BiometricType;
@@ -68,6 +69,58 @@ class BiometricDeviceManager
         $command = $this->mapper->mapDeleteUserCommand($dto);
 
         $this->sendRawCommand($deviceSerial, 'deleteuser', $command, $dto);
+    }
+
+    /**
+     * Start fingerprint enrollment on device
+     *
+     * دستگاه را وارد حالت ثبت اثر انگشت می‌کند
+     * دستگاه منتظر می‌ماند تا کاربر 3 بار انگشت خود را روی سنسور قرار دهد
+     *
+     * بعد از فراخوانی این متد، باید به صورت مداوم checkRegistrationStatus را فراخوانی کنید
+     * تا وضعیت فرآیند ثبت را دریافت کنید (status: 1, 2, 3, 100)
+     *
+     * @param string        $deviceSerial  شماره سریال دستگاه
+     * @param int           $employeeId    شناره کاربر
+     * @param BiometricType $biometricType نوع بیومتریک (معمولاً FINGERPRINT_1 تا FINGERPRINT_10)
+     * @param int           $flag          پرچم دستور (پیش‌فرض 2)
+     *
+     * @example
+     * BiometricDevice::enrollFingerprint('DEVICE_SERIAL', 123, BiometricType::FINGERPRINT_1);
+     * // سپس به صورت مداوم checkRegistrationStatus را فراخوانی کنید
+     */
+    public function enrollFingerprint(
+        string $deviceSerial,
+        int $employeeId,
+        BiometricType $biometricType,
+        int $flag = 2
+    ): void {
+        $dto = new EnrollFingerprintDTO(
+            employeeId: $employeeId,
+            biometricType: $biometricType,
+            flag: $flag
+        );
+
+        $command = $this->mapper->mapEnrollFingerprintCommand($dto);
+
+        $this->sendRawCommand($deviceSerial, 'adduser', $command, $dto);
+    }
+
+    /**
+     * Check registration status during fingerprint enrollment
+     *
+     * این متد باید به صورت polling (هر 1-2 ثانیه) فراخوانی شود
+     * تا وضعیت فرآیند ثبت اثر انگشت را دریافت کنید
+     *
+     * @param string $deviceSerial شماره سریال دستگاه
+     *
+     * @example
+     * // در یک loop یا با setInterval
+     * BiometricDevice::checkRegistrationStatus('DEVICE_SERIAL');
+     */
+    public function checkRegistrationStatus(string $deviceSerial): void
+    {
+        $this->sendRawCommand($deviceSerial, 'checkregstatus', ['cmd' => 'checkregstatus']);
     }
 
     /**

@@ -932,6 +932,363 @@ Photo:
 
 ---
 
+# fingerprint-enrollment.md
+
+# ثبت اثر انگشت (Fingerprint Enrollment)
+
+این بخش فرآیند کامل ثبت اثر انگشت کاربر را توضیح می‌دهد.
+
+---
+
+## نگاه کلی
+
+فرآیند ثبت اثر انگشت یک فرآیند **تعاملی** و **چند مرحله‌ای** است:
+
+1. سرور دستور `adduser` را ارسال می‌کند
+2. دستگاه وارد حالت ثبت اثر انگشت می‌شود
+3. کاربر باید **3 بار** انگشت خود را روی سنسور قرار دهد
+4. سرور باید به صورت مداوم (polling) وضعیت را با `checkregstatus` بررسی کند
+5. دستگاه status های مختلف را برمی‌گرداند (1, 2, 3, 100)
+6. در صورت موفقیت، اثر انگشت در دستگاه ذخیره می‌شود
+
+---
+
+## مراحل پیاده‌سازی
+
+### مرحله 1️⃣: شروع فرآیند ثبت (`adduser`)
+
+**Request (Server → Terminal):**
+
+```json
+{
+  "password": "1",
+  "cmd": "adduser",
+  "flag": 2,
+  "enrollid": 2,
+  "backupnum": 0
+}
+```
+
+**Response (Terminal → Server):**
+
+```json
+{
+  "ret": "adduser",
+  "enrollid": 2,
+  "sn": "ZPET14016833",
+  "backupnum": 0,
+  "result": true
+}
+```
+
+| Key       | Type   | Description                                        | Example          | Required |
+|-----------|--------|----------------------------------------------------|------------------|----------|
+| password  | string | رمز عبور دستگاه                                    | "1"              | بله      |
+| cmd       | string | نام دستور                                          | "adduser"        | بله      |
+| flag      | int    | پرچم دستور (معمولاً 2)                             | 2                | بله      |
+| enrollid  | int    | شناسه کاربر                                        | 2                | بله      |
+| backupnum | int    | شماره slot اثر انگشت (0-9)                        | 0                | بله      |
+
+**توضیحات:**
+
+- `backupnum`: هر کاربر می‌تواند تا 10 اثر انگشت داشته باشد (0-9)
+- `flag`: معمولاً مقدار 2 استفاده می‌شود
+- بعد از این دستور، دستگاه منتظر می‌ماند تا کاربر انگشت را روی سنسور قرار دهد
+
+---
+
+### مرحله 2️⃣: نظارت بر وضعیت (`checkregstatus` - Polling)
+
+بعد از ارسال `adduser`, باید به صورت مداوم (هر 1-2 ثانیه) وضعیت را بررسی کنیم:
+
+**Request (Server → Terminal):**
+
+```json
+{
+  "password": "1",
+  "cmd": "checkregstatus"
+}
+```
+
+**Responses (Terminal → Server):**
+
+#### Status 1: اولین اسکن اثر انگشت
+
+```json
+{
+  "ret": "checkregstatus",
+  "sn": "ZPET14016833",
+  "result": true,
+  "status": 1,
+  "msg": "ثبت اثرانگشت"
+}
+```
+
+یا با تصویر:
+
+```json
+{
+  "ret": "checkregstatus",
+  "sn": "ZPET14016833",
+  "result": true,
+  "status": 1,
+  "image": "/9j/4AAQSkZJRg..."
+}
+```
+
+#### Status 2: دومین اسکن اثر انگشت
+
+```json
+{
+  "ret": "checkregstatus",
+  "sn": "ZPET14016833",
+  "result": true,
+  "status": 2,
+  "msg": "ثبت مجدد اثرانگشت"
+}
+```
+
+یا با تصویر:
+
+```json
+{
+  "ret": "checkregstatus",
+  "sn": "ZPET14016833",
+  "result": true,
+  "status": 2,
+  "image": "/9j/4AAQSkZJRgABAQAAAQAB..."
+}
+```
+
+#### Status 3: سومین اسکن اثر انگشت
+
+```json
+{
+  "ret": "checkregstatus",
+  "sn": "ZPET14016833",
+  "result": true,
+  "status": 3,
+  "msg": "ثبت سوم اثرانگشت"
+}
+```
+
+#### Status 100: ثبت موفقیت‌آمیز ✅
+
+```json
+{
+  "ret": "checkregstatus",
+  "sn": "ZPET14016833",
+  "result": true,
+  "status": 100,
+  "msg": "ثبت موفق",
+  "image": "/9j/4AAQSkZJ..."
+}
+```
+
+بعد از دریافت `status: 100`، می‌توانید polling را متوقف کنید.
+
+---
+
+### مرحله 3️⃣: بررسی نهایی (`getuserinfo`)
+
+بعد از ثبت موفق، می‌توانید اطلاعات کاربر را بررسی کنید:
+
+**Request:**
+
+```json
+{
+  "password": "1",
+  "cmd": "getuserinfo",
+  "enrollid": 2
+}
+```
+
+**Response:**
+
+```json
+{
+  "ret": "getuserinfo",
+  "result": true,
+  "sn": "ZPET14016833",
+  "enrollid": 2,
+  "name": "",
+  "department": "",
+  "admin": 0,
+  "fpflag": 1,
+  "fpcnt": 1,
+  "enable": 1
+}
+```
+
+| Key    | Type | Description                | Value |
+|--------|------|----------------------------|-------|
+| fpflag | int  | دارای اثر انگشت (1 = بله) | 1     |
+| fpcnt  | int  | تعداد اثر انگشت ثبت شده   | 1     |
+
+---
+
+## جدول Status ها
+
+| Status | توضیح فارسی                       | Polling   | Action                                      |
+|--------|----------------------------------|-----------|---------------------------------------------|
+| 1      | اولین بار اسکن اثر انگشت         | ادامه     | نمایش پیام "لطفاً مجدداً اسکن کنید"         |
+| 2      | دومین بار اسکن اثر انگشت         | ادامه     | نمایش پیام "یک بار دیگر اسکن کنید"          |
+| 3      | سومین بار اسکن اثر انگشت         | ادامه     | نمایش پیام "در حال تکمیل..."               |
+| 100    | ثبت موفقیت‌آمیز کامل شده         | متوقف کن  | نمایش پیام "با موفقیت ثبت شد"              |
+| < 0    | خطا                              | متوقف کن  | نمایش پیام خطا                              |
+
+---
+
+## نکات مهم
+
+### ✅ نکات پیاده‌سازی:
+
+1. **Polling**: هر 1-2 ثانیه `checkregstatus` را فراخوانی کنید
+2. **سه مرحله‌ای**: دستگاه برای افزایش دقت، 3 بار از کاربر می‌خواهد اسکن کند
+3. **تصاویر Base64**: در برخی status ها، تصویر اثر انگشت برگردانده می‌شود (اختیاری)
+4. **پیام‌های فارسی**: فیلد `msg` حاوی پیام راهنمای فارسی است
+5. **Stop Condition**: وقتی `status: 100` دریافت کردید، polling را متوقف کنید
+
+### ⚠️ احتیاط‌های امنیتی:
+
+- محدود کردن تعداد دفعات تلاش (مثلاً 5 بار)
+- Timeout برای polling (مثلاً 60 ثانیه)
+- لاگ گرفتن از همه مراحل برای audit
+
+### 🎯 UX بهتر:
+
+- نمایش Progress Bar (33% → 66% → 90% → 100%)
+- نمایش تصویر اثر انگشت (اگر موجود باشد)
+- صدای بیپ یا vibration برای feedback
+- پیام‌های راهنما واضح و فارسی
+
+---
+
+## مثال کامل با Laravel Package
+
+### استفاده در Controller:
+
+```php
+use Sajadsoft\BiometricDevices\Facades\BiometricDevice;
+use Sajadsoft\BiometricDevices\Enums\BiometricType;
+
+// شروع فرآیند ثبت اثر انگشت
+BiometricDevice::enrollFingerprint(
+    deviceSerial: 'ZPET14016833',
+    employeeId: 2,
+    biometricType: BiometricType::FINGERPRINT_1
+);
+
+// بعد از این، باید polling را شروع کنید:
+// هر 1-2 ثانیه:
+BiometricDevice::checkRegistrationStatus('ZPET14016833');
+```
+
+### دریافت وضعیت با Event Listener:
+
+```php
+// app/Listeners/HandleFingerprintEnrollment.php
+
+namespace App\Listeners;
+
+use Sajadsoft\BiometricDevices\Events\FingerprintEnrollmentStarted;
+use Sajadsoft\BiometricDevices\Events\RegistrationStatusReceived;
+
+class HandleFingerprintEnrollment
+{
+    public function handleStarted(FingerprintEnrollmentStarted $event)
+    {
+        // دستگاه وارد حالت ثبت شد
+        Log::info('Enrollment started', [
+            'device' => $event->deviceSerial,
+            'employee' => $event->employeeId,
+        ]);
+        
+        // شروع polling (می‌توانید از Queue یا Job استفاده کنید)
+    }
+    
+    public function handleStatus(RegistrationStatusReceived $event)
+    {
+        $status = $event->status;
+        
+        // نمایش پیام به کاربر
+        Log::info($status->getUserMessage(), [
+            'progress' => $status->getProgressPercentage(),
+        ]);
+        
+        if ($status->isComplete()) {
+            // ثبت کامل شد - متوقف کردن polling
+            Log::info('Enrollment completed successfully');
+        }
+        
+        if ($status->hasFailed()) {
+            // خطا رخ داده
+            Log::error('Enrollment failed');
+        }
+    }
+}
+
+// در EventServiceProvider:
+Event::listen(FingerprintEnrollmentStarted::class, [HandleFingerprintEnrollment::class, 'handleStarted']);
+Event::listen(RegistrationStatusReceived::class, [HandleFingerprintEnrollment::class, 'handleStatus']);
+```
+
+### نمایش Real-Time با WebSocket:
+
+```javascript
+// Frontend (Vue/React/Livewire)
+
+// شروع فرآیند
+axios.post('/api/devices/enroll-fingerprint', {
+    device_serial: 'ZPET14016833',
+    employee_id: 2,
+    fingerprint_slot: 0
+});
+
+// دریافت وضعیت real-time از WebSocket
+Echo.channel('device.ZPET14016833')
+    .listen('RegistrationStatusReceived', (event) => {
+        const status = event.status;
+        
+        // بروزرسانی UI
+        updateProgress(status.progress_percentage);
+        showMessage(status.message);
+        
+        if (status.status === 100) {
+            // موفق
+            showSuccess('اثر انگشت با موفقیت ثبت شد');
+            stopPolling();
+        }
+    });
+```
+
+---
+
+## خلاصه Flow Chart
+
+```
+[Server] ──(adduser)──► [Device]
+                          │
+                          ▼
+                    [حالت ثبت]
+                          │
+[Server] ──(polling)──► [Device]
+    ▲                     │
+    │                     ▼
+    │              status: 1 (33%)
+    │                     │
+    │                     ▼
+    │              status: 2 (66%)
+    │                     │
+    │                     ▼
+    │              status: 3 (90%)
+    │                     │
+    └──────────────       ▼
+                   status: 100 ✅
+```
+
+---
+
 # خاتمه
 
-این فایل‌ها به سه بخش تقسیم شده‌اند: `protocol-intro.md`, `terminal-to-server.md`, `server-to-terminal.md` و شامل مثال JSON (انگلیسی) و توضیحات فارسی هستند. اگر بخواهی الان هر فایل را جداگانه دانلود یا ویرایش کنم، بگو تا برات نسخه‌ی قابل دانلود یا اصلاح‌شده آماده کنم.
+این فایل‌ها شامل مستندات کامل پروتکل WebSocket + JSON دستگاه‌های حضور و غیاب هستند. بخش جدید **Fingerprint Enrollment** به تفصیل فرآیند ثبت اثر انگشت را توضیح می‌دهد.

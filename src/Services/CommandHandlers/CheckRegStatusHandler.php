@@ -58,6 +58,7 @@ class CheckRegStatusHandler extends BaseCommandHandler
             employeeId: $data['enrollid'] ?? null,
             backupNum: $data['backupnum'] ?? null,
             isCancelled: $data['cancel'] ?? false, // آیا کاربر کنسل کرده؟
+            image: $data['image'] ?? null,         // تصویر اثر انگشت Base64
             rawData: $data
         );
 

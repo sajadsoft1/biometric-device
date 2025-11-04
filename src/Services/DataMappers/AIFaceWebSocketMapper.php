@@ -8,6 +8,7 @@ use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Arr;
 use Sajadsoft\BiometricDevices\DTOs\Commands\AddUserDTO;
+use Sajadsoft\BiometricDevices\DTOs\Commands\EnrollFingerprintDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\GetLogsDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\GetUserInfoDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\OpenDoorDTO;
@@ -264,6 +265,18 @@ class AIFaceWebSocketMapper extends AbstractDataMapper
             'cmd'       => 'getuserinfo',
             'enrollid'  => $dto->employeeId,
             'backupnum' => $dto->biometricType?->value ?? null,
+        ];
+    }
+
+    public function mapEnrollFingerprintCommand(EnrollFingerprintDTO $dto): array
+    {
+        $backupNum = $this->biometricTypeToDeviceValue($dto->biometricType);
+
+        return [
+            'cmd'       => 'adduser',
+            'enrollid'  => $dto->employeeId,
+            'backupnum' => $backupNum,
+            'flag'      => $dto->flag,
         ];
     }
 
