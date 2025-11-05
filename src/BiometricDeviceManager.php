@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Sajadsoft\BiometricDevices;
 
 use Illuminate\Contracts\Foundation\Application;
+use JsonException;
 use Sajadsoft\BiometricDevices\Contracts\DataMapperInterface;
 use Sajadsoft\BiometricDevices\DTOs\Commands\AddUserDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\EnrollFingerprintDTO;
@@ -387,7 +388,9 @@ class BiometricDeviceManager
         event(new CommandSent($deviceSerial, $commandName, $dto ?? (object) $params, $command));
     }
 
-    /** ذخیره دستور در دیتابیس */
+    /** ذخیره دستور در دیتابیس
+     * @throws JsonException
+     */
     protected function saveCommandToDatabase(string $deviceSerial, string $commandName, mixed $dto): ?DeviceCommand
     {
         $deviceModel  = config('biometric-devices.models.device', Device::class);
@@ -410,31 +413,29 @@ class BiometricDeviceManager
             return null;
         }
 
-        // بررسی تکراری نبودن (جلوگیری از duplicate)
-        $recentCommand = $commandModel::where('device_id', $device->id)
-            ->where('command_name', $commandName)
-            ->where('created_at', '>=', now()->subSeconds(2))
-            ->exists();
-
-        if ($recentCommand) {
-            Logger::debug('Duplicate command detected, skipping save', [
-                'device_serial' => $deviceSerial,
-                'command_name'  => $commandName,
-            ]);
-
-            return null;
-        }
+        // بررسی تکراری نبودن (جلوگیری از duplicate)todo
+        //        $recentCommand = $commandModel::where('device_id', $device->id)
+        //            ->where('command_name', $commandName)
+        //            ->where('created_at', '>=', now()->subSeconds(2))
+        //            ->exists();
+        //
+        //        if ($recentCommand) {
+        //            Logger::debug('Duplicate command detected, skipping save', [
+        //                'device_serial' => $deviceSerial,
+        //                'command_name'  => $commandName,
+        //            ]);
+        //
+        //            return null;
+        //        }
 
         // ذخیره command
-        $command = $commandModel::create([
+        return $commandModel::create([
             'device_id'       => $device->id,
             'command_name'    => $commandName,
-            'command_content' => json_encode($dto),
+            'command_content' => json_encode($dto, JSON_THROW_ON_ERROR),
             'status'          => DeviceCommandStatusEnum::PENDING,
             'send_status'     => false,
         ]);
-
-        return $command;
     }
 
     /** Get mapper instance */

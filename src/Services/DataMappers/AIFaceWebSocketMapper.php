@@ -185,6 +185,8 @@ class AIFaceWebSocketMapper extends AbstractDataMapper
      *         useosdp?: int,
      *         dislanguage?: int,
      *         mac?: string,
+     *         serverport?: string,
+     *         server_dns_name?: string,
      *     }
      * } $data
      */
@@ -201,6 +203,8 @@ class AIFaceWebSocketMapper extends AbstractDataMapper
             usedUsers: $devInfo['useduser'] ?? 0,
             usedLogs: $devInfo['usedlog'] ?? 0,
             capabilities: $this->extractCapabilities($devInfo),
+            serverport: ! empty($devInfo['serverport']) ? (string) $devInfo['serverport'] : null,
+            server_dns_name: ! empty($devInfo['server_dns_name']) ? (string) $devInfo['server_dns_name'] : null,
             rawData: $data,
         );
     }

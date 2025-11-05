@@ -848,7 +848,15 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
         }
 
         // ارسال پیام با استفاده از sendMessage که خودش encode می‌کنه
-        $this->sendMessage($socket, $params);
+        try {
+            $this->sendMessage($socket, $params);
+        } catch (JsonException $e) {
+            Logger::error("Failed to send command to device: {$deviceSerial}", [
+                'command' => $commandName,
+                'params'  => $params,
+                'error'   => $e->getMessage(),
+            ]);
+        }
 
         Logger::debug("Command sent to device: {$deviceSerial}", [
             'command' => $commandName,

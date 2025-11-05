@@ -15,7 +15,7 @@ class AddUserDTO
         public readonly int $employeeId,
         public readonly string $name,
         public readonly BiometricType $biometricType,
-        public readonly string $biometricData,
+        public readonly ?string $biometricData,
         public readonly bool $isAdmin = false,
     ) {}
 

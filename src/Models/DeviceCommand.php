@@ -7,7 +7,9 @@ namespace Sajadsoft\BiometricDevices\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use JsonException;
 use Sajadsoft\BiometricDevices\Enums\DeviceCommandStatusEnum;
+use Sajadsoft\BiometricDevices\Support\Logger;
 
 /**
  * Device Command Model
@@ -108,11 +110,17 @@ class DeviceCommand extends Model
     /** Mark command as successful */
     public function markAsSuccess(?array $responseData = null): bool
     {
-        return $this->update([
-            'status'      => DeviceCommandStatusEnum::SUCCESS,
-            'executed_at' => now(),
-            'response'    => $responseData ? json_encode($responseData) : null,
-        ]);
+        try {
+            return $this->update([
+                'status'      => DeviceCommandStatusEnum::SUCCESS,
+                'executed_at' => now(),
+                'response'    => $responseData ? json_encode(array_diff_key($responseData, array_flip(['record', 'secret'])), JSON_THROW_ON_ERROR) : null,
+            ]);
+        } catch (JsonException $e) {
+            Logger::error("Failed to encode response data for DeviceCommand ID {$this->id}: " . $e->getMessage());
+
+            return false;
+        }
     }
 
     /** Mark command as failed */

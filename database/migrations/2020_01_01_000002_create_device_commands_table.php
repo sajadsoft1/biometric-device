@@ -14,13 +14,13 @@ return new class extends Migration {
             $table->id();
             $table->foreignId('device_id')->index()->constrained('devices')->cascadeOnDelete();
             $table->string('command_name', 255)->comment('getuserlist, setuserinfo, deleteuser, etc.');
-            $table->mediumText('command_content')->nullable()->comment('JSON command payload');
+            $table->longText('command_content')->nullable()->comment('JSON command payload');
             $table->string('status')->index()->default(DeviceCommandStatusEnum::PENDING->value);
             $table->boolean('send_status')->index()->default(false);
             $table->integer('error_count')->default(0);
-            $table->text('error_message')->nullable();
+            $table->longText('error_message')->nullable();
             $table->dateTime('executed_at')->nullable();
-            $table->text('response')->nullable();
+            $table->longText('response')->nullable();
             $table->timestamps();
 
             // Indexes for better performance

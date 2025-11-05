@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Sajadsoft\BiometricDevices\Services\CommandHandlers;
 
+use JsonException;
 use Sajadsoft\BiometricDevices\Events\CommandResponseReceived;
 
 /**
@@ -11,6 +12,9 @@ use Sajadsoft\BiometricDevices\Events\CommandResponseReceived;
  */
 class GetDeviceInfoHandler extends BaseCommandHandler
 {
+    /**
+     * @throws JsonException
+     */
     public function handle(array $data, $connection): ?array
     {
         $serialNum = $this->getDeviceSerial($data);

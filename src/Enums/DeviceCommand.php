@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Sajadsoft\BiometricDevices\Enums;
 
+use Sajadsoft\BiometricDevices\Services\CommandHandlers\AddUserHandler;
 use Sajadsoft\BiometricDevices\Services\CommandHandlers\CheckRegStatusHandler;
 use Sajadsoft\BiometricDevices\Services\CommandHandlers\CleanAdminHandler;
 use Sajadsoft\BiometricDevices\Services\CommandHandlers\CleanLogHandler;
@@ -31,14 +32,14 @@ enum DeviceCommand: string
     case REGISTER = 'reg';
 
     // User Management
-    case GET_USER_LIST        = 'getuserlist';
-    case GET_USER_INFO        = 'getuserinfo';
-    case SET_USER_INFO        = 'setuserinfo';
-    case SEND_USER            = 'senduser';
-    case DELETE_USER          = 'deleteuser';
-    case SET_USER_NAME        = 'setusername';
-    case CLEAN_ADMIN          = 'cleanadmin';
-    case ENROLL_FINGERPRINT   = 'adduser';
+    case GET_USER_LIST      = 'getuserlist';
+    case GET_USER_INFO      = 'getuserinfo';
+    case SET_USER_INFO      = 'setuserinfo';
+    case SEND_USER          = 'senduser';
+    case DELETE_USER        = 'deleteuser';
+    case SET_USER_NAME      = 'setusername';
+    case CLEAN_ADMIN        = 'cleanadmin';
+    case ENROLL_FINGERPRINT = 'adduser';
 
     // Attendance Logs
     case SEND_LOG    = 'sendlog';
@@ -104,7 +105,7 @@ enum DeviceCommand: string
             self::ACK_COMMAND,
             self::SEND_QR_CODE,
             self::CHECK_REG_STATUS,
-        ]);
+        ], true);
     }
 
     /** Check if this is a command from server to device */

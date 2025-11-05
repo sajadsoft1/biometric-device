@@ -6,6 +6,7 @@ namespace Sajadsoft\BiometricDevices\Services\Pipelines;
 
 use Closure;
 use Sajadsoft\BiometricDevices\Enums\DeviceCommand;
+use Sajadsoft\BiometricDevices\Support\Logger;
 use ValueError;
 
 /**

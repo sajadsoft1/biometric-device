@@ -18,6 +18,8 @@ class DeviceInfoDTO
         public readonly int $usedUsers,
         public readonly int $usedLogs,
         public readonly array $capabilities,
+        public readonly ?string $serverport,
+        public readonly ?string $server_dns_name,
         public readonly array $rawData,
     ) {}
 
@@ -34,6 +36,8 @@ class DeviceInfoDTO
             'user_available'   => $this->userCapacity - $this->usedUsers,
             'log_available'    => $this->logCapacity - $this->usedLogs,
             'capabilities'     => $this->capabilities,
+            'serverport'       => $this->serverport,
+            'server_dns_name'  => $this->server_dns_name,
         ];
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Sajadsoft\BiometricDevices\Services\CommandHandlers;
 
+use Sajadsoft\BiometricDevices\DTOs\Responses\DeviceInfoDTO;
 use Sajadsoft\BiometricDevices\Events\DeviceConnected;
 use Sajadsoft\BiometricDevices\Models\Device;
 
@@ -38,7 +39,7 @@ class RegisterDeviceHandler extends BaseCommandHandler
     }
 
     /** ذخیره دستگاه در دیتابیس */
-    protected function saveDeviceToDatabase(string $serial, $deviceInfoDTO, mixed $connection): Device
+    protected function saveDeviceToDatabase(string $serial, DeviceInfoDTO $deviceInfoDTO, mixed $connection): Device
     {
         $deviceModel = config('biometric-devices.models.device', Device::class);
 
@@ -49,6 +50,8 @@ class RegisterDeviceHandler extends BaseCommandHandler
         if ($device) {
             $device->is_online         = true;
             $device->last_connected_at = now();
+            $device->ip_address        = $deviceInfoDTO->server_dns_name;
+            $device->port              = $deviceInfoDTO->serverport;
             // update extra attributes
             $newExtraAttributes = array_merge($device->extra_attributes ?? [], [
                 'firmware_version' => $deviceInfoDTO->firmwareVersion,
@@ -62,6 +65,8 @@ class RegisterDeviceHandler extends BaseCommandHandler
                 'name'              => $deviceInfoDTO->modelName,
                 'is_online'         => true,
                 'last_connected_at' => now(),
+                'ip_address'        => $deviceInfoDTO->server_dns_name,
+                'port'              => $deviceInfoDTO->serverport,
                 'extra_attributes'  => [
                     'firmware_version' => $deviceInfoDTO->firmwareVersion,
                     'user_capacity'    => $deviceInfoDTO->userCapacity,
