@@ -12,9 +12,7 @@ use Sajadsoft\BiometricDevices\Events\CommandResponseReceived;
  */
 class GetDeviceInfoHandler extends BaseCommandHandler
 {
-    /**
-     * @throws JsonException
-     */
+    /** @throws JsonException */
     public function handle(array $data, $connection): ?array
     {
         $serialNum = $this->getDeviceSerial($data);
