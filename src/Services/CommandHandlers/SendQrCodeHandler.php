@@ -18,11 +18,14 @@ class SendQrCodeHandler extends BaseCommandHandler
     /**
      * Handle QR code data from device
      *
+     * بر اساس مستندات API، دستگاه فیلد 'record' را ارسال می‌کند (نه qrcode یا qr)
+     *
      * @param array{
      *     cmd: string,
      *     sn: string,
-     *     qrcode?: string,
-     *     qr?: string,
+     *     record?: string,    // محتوای QR code (طبق مستندات)
+     *     qrcode?: string,    // fallback برای سازگاری
+     *     qr?: string,        // fallback برای سازگاری
      *     enrollid?: int,
      *     time?: string,
      * } $data
@@ -39,8 +42,8 @@ class SendQrCodeHandler extends BaseCommandHandler
             return $this->buildResponse('sendqrcode', false);
         }
 
-        // استخراج محتوای QR code
-        $qrCodeContent = $data['qrcode'] ?? $data['qr'] ?? null;
+        // استخراج محتوای QR code - طبق مستندات API فیلد 'record' است
+        $qrCodeContent = $data['record'] ?? $data['qrcode'] ?? $data['qr'] ?? null;
 
         if ( ! $qrCodeContent) {
             $this->log('SendQrCodeHandler:Empty QR code received', [
@@ -67,8 +70,14 @@ class SendQrCodeHandler extends BaseCommandHandler
         // پخش Event
         event(new QrCodeReceived($qrCodeDTO));
 
-        // پاسخ موفق
-        return $this->buildResponse('sendqrcode', true);
+        // پاسخ پیش‌فرض - Custom Handler در app layer می‌تواند این را override کند
+        // طبق مستندات API باید شامل: access, enrollid, username, message, voice باشد
+        return $this->buildResponse('sendqrcode', true, [
+            'access'   => 0, // پیش‌فرض: دسترسی نداره (Custom Handler باید تغییر بده)
+            'enrollid' => $qrCodeDTO->employeeId,
+            'message'  => 'QR code received',
+            'voice'    => 'QR code received',
+        ]);
     }
 
     public function getCommandName(): string

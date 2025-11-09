@@ -16,7 +16,6 @@ readonly class QrCodeDTO
         public string $qrCodeData,       // محتوای QR code
         public string $deviceSerial,     // شماره سریال دستگاه
         public Carbon $timestamp,        // زمان اسکن
-        public ?int $employeeId,         // شناسه کارمند (اگر به کاربر مرتبط باشد)
         public array $rawData,           // داده‌های خام دستگاه
     ) {}
 
@@ -27,7 +26,6 @@ readonly class QrCodeDTO
             'qr_code_data'  => $this->qrCodeData,
             'device_serial' => $this->deviceSerial,
             'timestamp'     => $this->timestamp->toIso8601String(),
-            'employee_id'   => $this->employeeId,
             'raw_data'      => $this->rawData,
         ];
     }
