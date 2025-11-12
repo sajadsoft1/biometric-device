@@ -47,7 +47,7 @@ class GetAllLogHandler extends BaseCommandHandler
         // پردازش هر رکورد
         if (isset($data['record']) && is_array($data['record'])) {
             foreach ($data['record'] as $record) {
-                $record['sn']  = $serialNum;
+                $record['sn'] = $serialNum;
                 $attendanceDTO = $this->mapper->mapToAttendanceDTO($record);
                 event(new AttendanceReceived($attendanceDTO));
             }
@@ -58,8 +58,8 @@ class GetAllLogHandler extends BaseCommandHandler
         $remainingCount = $data['count'] ?? 0;
 
         $this->log('GetAllLogHandler:Attendance logs received', [
-            'pure'      => $data,
-            'count'     => $count,
+            'pure' => $data,
+            'count' => $count,
             'remaining' => $remainingCount,
         ]);
 

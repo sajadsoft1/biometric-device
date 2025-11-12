@@ -18,7 +18,7 @@ class OpenDoorDTO
     {
         return [
             'door_number' => $this->doorNumber,
-            'duration'    => $this->duration,
+            'duration' => $this->duration,
         ];
     }
 }

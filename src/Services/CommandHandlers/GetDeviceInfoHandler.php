@@ -25,7 +25,7 @@ class GetDeviceInfoHandler extends BaseCommandHandler
         $deviceInfoDTO = $this->mapper->mapToDeviceInfoDTO($data);
 
         $this->log('GetDeviceInfoHandler:Device info received', [
-            'pure'   => $data,
+            'pure' => $data,
             'mapped' => $deviceInfoDTO->toArray(),
         ]);
 

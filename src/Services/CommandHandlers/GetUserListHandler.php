@@ -40,19 +40,19 @@ class GetUserListHandler extends BaseCommandHandler
         $enrollments = [];
         if (isset($data['record']) && is_array($data['record'])) {
             foreach ($data['record'] as $record) {
-                $record['sn']  = $serialNum;
+                $record['sn'] = $serialNum;
                 $enrollments[] = $this->mapper->mapToEnrollmentDTO($record);
             }
         }
 
-        $count          = count($enrollments);
+        $count = count($enrollments);
         $remainingCount = $data['count'] ?? 0;
-        $hasMore        = $remainingCount > 0;
+        $hasMore = $remainingCount > 0;
 
         $this->log('GetUserListHandler:User list received', [
-            'pure'      => $data,
-            'count'     => $count,
-            'has_more'  => $hasMore,
+            'pure' => $data,
+            'count' => $count,
+            'has_more' => $hasMore,
             'remaining' => $remainingCount,
         ]);
 

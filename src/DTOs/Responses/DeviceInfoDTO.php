@@ -26,18 +26,18 @@ class DeviceInfoDTO
     public function toArray(): array
     {
         return [
-            'serial_number'    => $this->serialNumber,
-            'model_name'       => $this->modelName,
+            'serial_number' => $this->serialNumber,
+            'model_name' => $this->modelName,
             'firmware_version' => $this->firmwareVersion,
-            'user_capacity'    => $this->userCapacity,
-            'log_capacity'     => $this->logCapacity,
-            'used_users'       => $this->usedUsers,
-            'used_logs'        => $this->usedLogs,
-            'user_available'   => $this->userCapacity - $this->usedUsers,
-            'log_available'    => $this->logCapacity - $this->usedLogs,
-            'capabilities'     => $this->capabilities,
-            'serverport'       => $this->serverport,
-            'server_dns_name'  => $this->server_dns_name,
+            'user_capacity' => $this->userCapacity,
+            'log_capacity' => $this->logCapacity,
+            'used_users' => $this->usedUsers,
+            'used_logs' => $this->usedLogs,
+            'user_available' => $this->userCapacity - $this->usedUsers,
+            'log_available' => $this->logCapacity - $this->usedLogs,
+            'capabilities' => $this->capabilities,
+            'serverport' => $this->serverport,
+            'server_dns_name' => $this->server_dns_name,
         ];
     }
 }

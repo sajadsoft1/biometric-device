@@ -22,7 +22,7 @@ class OpenDoorHandler extends BaseCommandHandler
         $result = $data['result'] ?? false;
 
         $this->log('OpenDoorHandler:Door open response', [
-            'pure'    => $data,
+            'pure' => $data,
             'success' => $result,
         ]);
 

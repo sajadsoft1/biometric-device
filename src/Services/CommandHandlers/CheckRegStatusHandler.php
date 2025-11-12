@@ -63,10 +63,10 @@ class CheckRegStatusHandler extends BaseCommandHandler
         );
 
         $this->log('CheckRegStatusHandler:Registration status received', [
-            'pure'         => $data,
-            'mapped'       => $statusDTO->toArray(),
-            'message'      => $statusDTO->getUserMessage(),
-            'status'       => $statusDTO->getStatusLabel(),
+            'pure' => $data,
+            'mapped' => $statusDTO->toArray(),
+            'message' => $statusDTO->getUserMessage(),
+            'status' => $statusDTO->getStatusLabel(),
             'is_cancelled' => $statusDTO->isCancelled,
         ]);
 

@@ -60,7 +60,7 @@ class AIFaceWebSocketMapper extends AbstractDataMapper
         // تشخیص نوع ساختار داده:
         // 1. اگر record آرایه‌ای از رکوردها است (sendlog) -> اولین رکورد را بگیر
         // 2. اگر خود data یک رکورد است (getalllog - در loop) -> از data استفاده کن
-        $record       = $data;
+        $record = $data;
         $deviceSerial = $data['sn'] ?? '';
 
         // اگر record آرایه است و شامل داده است، اولین رکورد را بگیر
@@ -109,8 +109,8 @@ class AIFaceWebSocketMapper extends AbstractDataMapper
     public function mapToUserDTO(array $data): UserDTO
     {
         $enrollId = $data['enrollid'] ?? 0;
-        $admin    = $this->parseBoolean($data['admin'] ?? 0);
-        $enabled  = $this->parseBoolean($data['enable'] ?? 1);
+        $admin = $this->parseBoolean($data['admin'] ?? 0);
+        $enabled = $this->parseBoolean($data['enable'] ?? 1);
 
         // Convert record to string (can be int for password/card or string for biometric data)
         $biometricData = null;
@@ -212,12 +212,12 @@ class AIFaceWebSocketMapper extends AbstractDataMapper
     protected function extractCapabilities(array $devInfo): array
     {
         return [
-            'face_capacity'        => $devInfo['facesize'] ?? 0,
+            'face_capacity' => $devInfo['facesize'] ?? 0,
             'fingerprint_capacity' => $devInfo['fpsize'] ?? 0,
-            'card_capacity'        => $devInfo['cardsize'] ?? 0,
-            'used_face'            => $devInfo['usedface'] ?? 0,
-            'used_fingerprint'     => $devInfo['usedfp'] ?? 0,
-            'used_card'            => $devInfo['usedcard'] ?? 0,
+            'card_capacity' => $devInfo['cardsize'] ?? 0,
+            'used_face' => $devInfo['usedface'] ?? 0,
+            'used_fingerprint' => $devInfo['usedfp'] ?? 0,
+            'used_card' => $devInfo['usedcard'] ?? 0,
         ];
     }
 
@@ -232,11 +232,11 @@ class AIFaceWebSocketMapper extends AbstractDataMapper
         $backupNum = $this->biometricTypeToDeviceValue($dto->biometricType);
 
         $command = [
-            'cmd'       => 'setuserinfo',
-            'enrollid'  => $dto->employeeId,
-            'name'      => $dto->name,
+            'cmd' => 'setuserinfo',
+            'enrollid' => $dto->employeeId,
+            'name' => $dto->name,
             'backupnum' => $backupNum,
-            'admin'     => $dto->isAdmin ? 1 : 0,
+            'admin' => $dto->isAdmin ? 1 : 0,
         ];
 
         // For the password and card, record is numeric
@@ -252,7 +252,7 @@ class AIFaceWebSocketMapper extends AbstractDataMapper
     public function mapDeleteUserCommand(\Sajadsoft\BiometricDevices\DTOs\Commands\DeleteUserDTO $dto): array
     {
         $command = [
-            'cmd'      => 'deleteuser',
+            'cmd' => 'deleteuser',
             'enrollid' => $dto->employeeId,
         ];
 
@@ -266,8 +266,8 @@ class AIFaceWebSocketMapper extends AbstractDataMapper
     public function mapGetUserInfoCommand(GetUserInfoDTO $dto): array
     {
         return [
-            'cmd'       => 'getuserinfo',
-            'enrollid'  => $dto->employeeId,
+            'cmd' => 'getuserinfo',
+            'enrollid' => $dto->employeeId,
             'backupnum' => $dto->biometricType?->value ?? null,
         ];
     }
@@ -277,10 +277,10 @@ class AIFaceWebSocketMapper extends AbstractDataMapper
         $backupNum = $this->biometricTypeToDeviceValue($dto->biometricType);
 
         return [
-            'cmd'       => 'adduser',
-            'enrollid'  => $dto->employeeId,
+            'cmd' => 'adduser',
+            'enrollid' => $dto->employeeId,
             'backupnum' => $backupNum,
-            'flag'      => $dto->flag,
+            'flag' => $dto->flag,
         ];
     }
 
@@ -289,8 +289,8 @@ class AIFaceWebSocketMapper extends AbstractDataMapper
     public function mapOpenDoorCommand(OpenDoorDTO $dto): array
     {
         return [
-            'cmd'      => 'opendoor',
-            'doornum'  => $dto->doorNumber,
+            'cmd' => 'opendoor',
+            'doornum' => $dto->doorNumber,
             'duration' => $dto->duration,
         ];
     }
@@ -298,7 +298,7 @@ class AIFaceWebSocketMapper extends AbstractDataMapper
     public function mapSetTimeCommand(SetTimeDTO $dto): array
     {
         return [
-            'cmd'  => 'settime',
+            'cmd' => 'settime',
             'time' => $dto->datetime->format('Y-m-d H:i:s'),
         ];
     }
@@ -308,15 +308,15 @@ class AIFaceWebSocketMapper extends AbstractDataMapper
     public function mapSetUserAccessCommand(SetUserAccessDTO $dto): array
     {
         return [
-            'cmd'    => 'setuserlock',
-            'count'  => 1,
+            'cmd' => 'setuserlock',
+            'count' => 1,
             'record' => [
                 [
-                    'enrollid'  => $dto->employeeId,
-                    'weekzone'  => $dto->weekZone,
-                    'group'     => $dto->group,
+                    'enrollid' => $dto->employeeId,
+                    'weekzone' => $dto->weekZone,
+                    'group' => $dto->group,
                     'starttime' => $dto->startDate->format('Y-m-d') . ' 00:00:00',
-                    'endtime'   => $dto->endDate->format('Y-m-d') . ' 00:00:00',
+                    'endtime' => $dto->endDate->format('Y-m-d') . ' 00:00:00',
                 ],
             ],
         ];
@@ -325,7 +325,7 @@ class AIFaceWebSocketMapper extends AbstractDataMapper
     public function mapSetDeviceLockCommand(SetDeviceLockDTO $dto): array
     {
         return [
-            'cmd'    => 'setdevlock',
+            'cmd' => 'setdevlock',
             'locked' => $dto->locked ? 1 : 0,
         ];
     }

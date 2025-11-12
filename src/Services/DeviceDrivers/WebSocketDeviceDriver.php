@@ -65,8 +65,8 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
             throw new RuntimeException('Failed to listen on socket');
         }
 
-        $this->sockets[]            = $this->socket;
-        $this->lastPingTime         = microtime(true);
+        $this->sockets[] = $this->socket;
+        $this->lastPingTime = microtime(true);
         $this->lastCommandCheckTime = microtime(true);
 
         $this->info('WebSocket server started successfully!');
@@ -80,8 +80,8 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
     protected function mainLoop(): void
     {
         while (true) {
-            $read   = $this->sockets;
-            $write  = null;
+            $read = $this->sockets;
+            $write = null;
             $except = null;
 
             if (socket_select($read, $write, $except, 0, 100000) > 0) {
@@ -115,9 +115,9 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
 
         $this->info("New connection from {$address}:{$port}");
 
-        $this->sockets[]                    = $clientSocket;
+        $this->sockets[] = $clientSocket;
         $this->handshakeComplete[$socketId] = false;
-        $this->lastActivityTime[$socketId]  = microtime(true);
+        $this->lastActivityTime[$socketId] = microtime(true);
     }
 
     /**
@@ -179,9 +179,9 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
         // Process all complete frames in buffer
         while ($dataLen > $needLen) {
             // Parse frame header
-            $opcode        = ord($dataRec[0]) & 15;
-            $b2            = ord($dataRec[1]);
-            $mask          = ($b2 & 128) !== 0;
+            $opcode = ord($dataRec[0]) & 15;
+            $b2 = ord($dataRec[1]);
+            $mask = ($b2 & 128) !== 0;
             $payloadLength = $b2 & 127;
 
             // Calculate extended payload length size
@@ -313,7 +313,7 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
 
         // پردازش از طریق pipeline
         $deviceSerial = $this->socketToSerial[$socketId] ?? null;
-        $response     = $this->processMessage($data, $socket, $deviceSerial);
+        $response = $this->processMessage($data, $socket, $deviceSerial);
 
         // ذخیره serial number برای این socket
         if (isset($data['sn'])) {
@@ -342,7 +342,7 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
                 }
             }
 
-            $this->socketToSerial[$socketId]   = $serialNumber;
+            $this->socketToSerial[$socketId] = $serialNumber;
             $this->connectedDevices[$socketId] = $serialNumber;
         }
 
@@ -360,8 +360,8 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
         }
 
         $keyStart = strpos($buffer, 'Sec-WebSocket-Key:') + 18;
-        $keyEnd   = strpos($buffer, "\r\n", $keyStart);
-        $key      = trim(substr($buffer, $keyStart, $keyEnd - $keyStart));
+        $keyEnd = strpos($buffer, "\r\n", $keyStart);
+        $key = trim(substr($buffer, $keyStart, $keyEnd - $keyStart));
 
         $acceptKey = base64_encode(sha1($key . '258EAFA5-E914-47DA-95CA-C5AB0DC85B11', true));
 
@@ -381,8 +381,8 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
      */
     public function sendMessage($socket, array $message): void
     {
-        $json      = json_encode($message, JSON_THROW_ON_ERROR);
-        $length    = strlen($json);
+        $json = json_encode($message, JSON_THROW_ON_ERROR);
+        $length = strlen($json);
         $firstByte = 0x81; // Text frame
 
         if ($length <= 125) {
@@ -419,7 +419,7 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
     protected function getSocketId($socket): string
     {
         $address = 'unknown';
-        $port    = 0;
+        $port = 0;
 
         try {
             @socket_getpeername($socket, $address, $port);
@@ -476,7 +476,7 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
     protected function sendPingToAll(): void
     {
         $ping = chr(0x89) . chr(0x00);
-        $now  = microtime(true);
+        $now = microtime(true);
 
         foreach ($this->sockets as $socket) {
             if ($socket === $this->socket) {
@@ -590,9 +590,9 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
         if ($command->hasExceededMaxRetries()) {
             $command->markAsFailed('Device not connected after maximum retry attempts');
             Logger::warning("Command failed after max retries: {$device->serial}", [
-                'command_id'   => $command->id,
+                'command_id' => $command->id,
                 'command_name' => $command->command_name,
-                'retry_count'  => $command->error_count,
+                'retry_count' => $command->error_count,
                 'max_attempts' => config('biometric-devices.retry.max_attempts', 3),
             ]);
 
@@ -853,14 +853,14 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
         } catch (JsonException $e) {
             Logger::error("Failed to send command to device: {$deviceSerial}", [
                 'command' => $commandName,
-                'params'  => $params,
-                'error'   => $e->getMessage(),
+                'params' => $params,
+                'error' => $e->getMessage(),
             ]);
         }
 
         Logger::debug("Command sent to device: {$deviceSerial}", [
             'command' => $commandName,
-            'params'  => $params,
+            'params' => $params,
         ]);
 
         return true;

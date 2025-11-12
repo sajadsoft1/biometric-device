@@ -19,7 +19,7 @@ class SetDeviceLockHandler extends BaseCommandHandler
         $result = $data['result'] ?? false;
 
         $this->log('SetDeviceLockHandler:Set device lock response', [
-            'pure'    => $data,
+            'pure' => $data,
             'success' => $result,
         ]);
 

@@ -63,7 +63,7 @@ class SendQrCodeHandler extends BaseCommandHandler
         );
 
         $this->log('SendQrCodeHandler:QR code scanned', [
-            'pure'   => $data,
+            'pure' => $data,
             'mapped' => $qrCodeDTO->toArray(),
         ]);
 
@@ -73,10 +73,10 @@ class SendQrCodeHandler extends BaseCommandHandler
         // پاسخ پیش‌فرض - Custom Handler در app layer می‌تواند این را override کند
         // طبق مستندات API باید شامل: access, enrollid, username, message, voice باشد
         return $this->buildResponse('sendqrcode', true, [
-            'access'   => 0, // پیش‌فرض: دسترسی نداره (Custom Handler باید تغییر بده)
+            'access' => 0, // پیش‌فرض: دسترسی نداره (Custom Handler باید تغییر بده)
             'enrollid' => $qrCodeDTO->employeeId,
-            'message'  => 'QR code received',
-            'voice'    => 'QR code received',
+            'message' => 'QR code received',
+            'voice' => 'QR code received',
         ]);
     }
 
@@ -96,7 +96,7 @@ class SendQrCodeHandler extends BaseCommandHandler
             return Carbon::parse($time);
         } catch (Exception $e) {
             $this->log('SendQrCodeHandler:Failed to parse timestamp', [
-                'time'  => $time,
+                'time' => $time,
                 'error' => $e->getMessage(),
             ]);
 

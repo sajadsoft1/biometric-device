@@ -20,7 +20,7 @@ class DefaultCommandHandler extends BaseCommandHandler
         }
 
         $commandName = $data['ret'] ?? 'unknown';
-        $result      = $data['result'] ?? true;
+        $result = $data['result'] ?? true;
 
         $this->log("Default handler for: {$commandName}");
 

@@ -19,7 +19,7 @@ class DeleteUserHandler extends BaseCommandHandler
         $result = $data['result'] ?? false;
 
         $this->log('DeleteUserHandler:User deletion response', [
-            'pure'    => $data,
+            'pure' => $data,
             'success' => $result,
         ]);
 

@@ -40,7 +40,7 @@ class SetUsernameHandler extends BaseCommandHandler
         $result = $data['result'] ?? false;
 
         $this->log('SetUsernameHandler:Batch username update response received', [
-            'pure'    => $data,
+            'pure' => $data,
             'success' => $result,
         ]);
 

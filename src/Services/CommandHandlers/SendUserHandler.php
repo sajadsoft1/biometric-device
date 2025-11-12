@@ -52,7 +52,7 @@ class SendUserHandler extends BaseCommandHandler
         // اما ما فقط وقتی نیاز داریم که واقعاً درخواست داده‌ایم
         if ($hasCommand) {
             $this->log('SendUserHandler:User info sent by device', [
-                'pure'   => $data,
+                'pure' => $data,
                 'mapped' => $userDTO->toArray(),
             ]);
             // پخش Event - کاربر مسئول ذخیره

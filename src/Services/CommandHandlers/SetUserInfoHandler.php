@@ -19,7 +19,7 @@ class SetUserInfoHandler extends BaseCommandHandler
         $result = $data['result'] ?? false;
 
         $this->log('SetUserInfoHandler:Set user info response', [
-            'pure'    => $data,
+            'pure' => $data,
             'success' => $result,
         ]);
 

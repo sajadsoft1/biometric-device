@@ -27,8 +27,8 @@ abstract class BaseCommandHandler implements CommandHandlerInterface
     protected function buildResponse(string $command, bool $result, array $extra = []): array
     {
         return array_merge([
-            'ret'       => $command,
-            'result'    => $result,
+            'ret' => $command,
+            'result' => $result,
             'cloudtime' => now()->format('Y-m-d H:i:s'),
         ], $extra);
     }
@@ -36,7 +36,7 @@ abstract class BaseCommandHandler implements CommandHandlerInterface
     /** Log handler activity */
     protected function log(string $message, array $context = []): void
     {
-        Logger::debug("[{$this->getCommandName()}] {$message}" . '  :' . json_encode($context, JSON_THROW_ON_ERROR|JSON_PRETTY_PRINT));
+        Logger::debug("[{$this->getCommandName()}] {$message}" . '  :' . json_encode($context, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
     }
 
     /** Get device serial from data */
@@ -56,7 +56,7 @@ abstract class BaseCommandHandler implements CommandHandlerInterface
         bool $success,
         ?array $responseData = null
     ): bool {
-        $deviceModel  = config('biometric-devices.models.device', Device::class);
+        $deviceModel = config('biometric-devices.models.device', Device::class);
         $commandModel = config('biometric-devices.models.device_command', DeviceCommand::class);
 
         // بررسی وجود Model ها

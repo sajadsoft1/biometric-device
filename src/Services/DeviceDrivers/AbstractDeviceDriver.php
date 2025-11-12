@@ -76,8 +76,8 @@ abstract class AbstractDeviceDriver implements DeviceDriverInterface
     protected function processMessage(array $data, $connection, ?string $deviceSerial = null): ?array
     {
         $context = [
-            'data'          => $data,
-            'connection'    => $connection,
+            'data' => $data,
+            'connection' => $connection,
             'device_serial' => $deviceSerial,
         ];
 

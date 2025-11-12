@@ -44,12 +44,12 @@ class Device extends Model
     protected function casts(): array
     {
         return [
-            'type'                 => DeviceModel::class,
-            'is_online'            => 'boolean',
-            'block'                => 'boolean',
-            'last_connected_at'    => 'datetime',
+            'type' => DeviceModel::class,
+            'is_online' => 'boolean',
+            'block' => 'boolean',
+            'last_connected_at' => 'datetime',
             'last_disconnected_at' => 'datetime',
-            'extra_attributes'     => 'array',
+            'extra_attributes' => 'array',
         ];
     }
 
@@ -95,7 +95,7 @@ class Device extends Model
     public function markAsOnline(): void
     {
         $this->update([
-            'is_online'         => true,
+            'is_online' => true,
             'last_connected_at' => now(),
         ]);
     }
@@ -104,7 +104,7 @@ class Device extends Model
     public function markAsOffline(): void
     {
         $this->update([
-            'is_online'            => false,
+            'is_online' => false,
             'last_disconnected_at' => now(),
         ]);
     }

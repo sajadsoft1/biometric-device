@@ -48,30 +48,30 @@ class RegisterDeviceHandler extends BaseCommandHandler
 
         $device = $deviceModel::where('serial', $serial)->first();
         if ($device) {
-            $device->is_online         = true;
+            $device->is_online = true;
             $device->last_connected_at = now();
-            $device->ip_address        = $deviceInfoDTO->server_dns_name;
-            $device->port              = $deviceInfoDTO->serverport;
+            $device->ip_address = $deviceInfoDTO->server_dns_name;
+            $device->port = $deviceInfoDTO->serverport;
             // update extra attributes
             $newExtraAttributes = array_merge($device->extra_attributes ?? [], [
                 'firmware_version' => $deviceInfoDTO->firmwareVersion,
-                'user_capacity'    => $deviceInfoDTO->userCapacity,
-                'log_capacity'     => $deviceInfoDTO->logCapacity,
+                'user_capacity' => $deviceInfoDTO->userCapacity,
+                'log_capacity' => $deviceInfoDTO->logCapacity,
             ]);
             $device->updateDeviceInfo($newExtraAttributes);
         } else {
             $device = $deviceModel::create([
-                'serial'            => $serial,
-                'name'              => $deviceInfoDTO->modelName,
-                'is_online'         => true,
+                'serial' => $serial,
+                'name' => $deviceInfoDTO->modelName,
+                'is_online' => true,
                 'last_connected_at' => now(),
-                'ip_address'        => $deviceInfoDTO->server_dns_name,
-                'port'              => $deviceInfoDTO->serverport,
-                'extra_attributes'  => [
+                'ip_address' => $deviceInfoDTO->server_dns_name,
+                'port' => $deviceInfoDTO->serverport,
+                'extra_attributes' => [
                     'firmware_version' => $deviceInfoDTO->firmwareVersion,
-                    'user_capacity'    => $deviceInfoDTO->userCapacity,
-                    'log_capacity'     => $deviceInfoDTO->logCapacity,
-                    'device_type'      => $deviceInfoDTO->deviceType ?? 'unknown',
+                    'user_capacity' => $deviceInfoDTO->userCapacity,
+                    'log_capacity' => $deviceInfoDTO->logCapacity,
+                    'device_type' => $deviceInfoDTO->deviceType ?? 'unknown',
                 ],
             ]);
         }

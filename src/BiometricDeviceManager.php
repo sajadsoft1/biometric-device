@@ -32,7 +32,7 @@ class BiometricDeviceManager
         $this->app = $app;
 
         // Load mapper از config
-        $mapperClass  = config('biometric-devices.mappers.zkteco-websocket');
+        $mapperClass = config('biometric-devices.mappers.zkteco-websocket');
         $this->mapper = new $mapperClass;
     }
 
@@ -177,11 +177,11 @@ class BiometricDeviceManager
     public function setUsernames(string $deviceSerial, array $usernames): void
     {
         $command = [
-            'cmd'    => 'setusername',
-            'count'  => count($usernames),
+            'cmd' => 'setusername',
+            'count' => count($usernames),
             'record' => array_map(fn ($item) => [
                 'enrollid' => $item['enrollid'],
-                'name'     => $item['name'],
+                'name' => $item['name'],
             ], $usernames),
         ];
 
@@ -393,7 +393,7 @@ class BiometricDeviceManager
      */
     protected function saveCommandToDatabase(string $deviceSerial, string $commandName, mixed $dto): ?DeviceCommand
     {
-        $deviceModel  = config('biometric-devices.models.device', Device::class);
+        $deviceModel = config('biometric-devices.models.device', Device::class);
         $commandModel = config('biometric-devices.models.device_command', DeviceCommand::class);
 
         // بررسی وجود Model ها
@@ -406,7 +406,7 @@ class BiometricDeviceManager
 
         if ( ! $device) {
             Logger::debug('Device not found for command', [
-                'serial'  => $deviceSerial,
+                'serial' => $deviceSerial,
                 'command' => $commandName,
             ]);
 
@@ -430,11 +430,11 @@ class BiometricDeviceManager
 
         // ذخیره command
         return $commandModel::create([
-            'device_id'       => $device->id,
-            'command_name'    => $commandName,
+            'device_id' => $device->id,
+            'command_name' => $commandName,
             'command_content' => json_encode($dto, JSON_THROW_ON_ERROR),
-            'status'          => DeviceCommandStatusEnum::PENDING,
-            'send_status'     => false,
+            'status' => DeviceCommandStatusEnum::PENDING,
+            'send_status' => false,
         ]);
     }
 

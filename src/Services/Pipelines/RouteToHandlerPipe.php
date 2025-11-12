@@ -17,7 +17,7 @@ class RouteToHandlerPipe
 
         if ($command) {
             // دریافت handler class
-            $handlerClass       = $command->getHandlerClass();
+            $handlerClass = $command->getHandlerClass();
             $context['handler'] = app($handlerClass);
         } else {
             $context['handler'] = null;

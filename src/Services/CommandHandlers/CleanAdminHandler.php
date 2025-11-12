@@ -42,7 +42,7 @@ class CleanAdminHandler extends BaseCommandHandler
         $result = $data['result'] ?? false;
 
         $this->log('CleanAdminHandler:Clean admin response received', [
-            'pure'    => $data,
+            'pure' => $data,
             'success' => $result,
         ]);
 

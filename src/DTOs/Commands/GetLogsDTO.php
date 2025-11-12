@@ -18,7 +18,7 @@ class GetLogsDTO
     {
         return [
             'start_from_beginning' => $this->startFromBeginning,
-            'new_logs_only'        => $this->newLogsOnly,
+            'new_logs_only' => $this->newLogsOnly,
         ];
     }
 }

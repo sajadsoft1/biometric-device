@@ -39,7 +39,7 @@ class SetTimeHandler extends BaseCommandHandler
         $result = $data['result'] ?? false;
 
         $this->log('SetTimeHandler:Set time response received', [
-            'pure'    => $data,
+            'pure' => $data,
             'success' => $result,
         ]);
 

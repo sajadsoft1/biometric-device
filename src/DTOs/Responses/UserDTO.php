@@ -33,22 +33,22 @@ readonly class UserDTO
     public function toArray(): array
     {
         return [
-            'employee_id'        => $this->employeeId,
-            'name'               => $this->name,
-            'is_admin'           => $this->isAdmin,
-            'biometric_type'     => $this->biometricType->value,
+            'employee_id' => $this->employeeId,
+            'name' => $this->name,
+            'is_admin' => $this->isAdmin,
+            'biometric_type' => $this->biometricType->value,
             'has_biometric_data' => ! empty($this->biometricData),
-            'biometric_data'     => $this->biometricData,
-            'device_serial'      => $this->deviceSerial,
-            'card_number'        => $this->cardNumber,
-            'password'           => $this->password,
-            'enabled'            => $this->enabled,
-            'shift_id'           => $this->shiftId,
-            'department'         => $this->department,
-            'photo_url'          => $this->photoUrl,
-            'fingerprint_flag'   => $this->fingerprintFlag,
-            'fingerprint_count'  => $this->fingerprintCount,
-            'face_flag'          => $this->faceFlag,
+            'biometric_data' => $this->biometricData,
+            'device_serial' => $this->deviceSerial,
+            'card_number' => $this->cardNumber,
+            'password' => $this->password,
+            'enabled' => $this->enabled,
+            'shift_id' => $this->shiftId,
+            'department' => $this->department,
+            'photo_url' => $this->photoUrl,
+            'fingerprint_flag' => $this->fingerprintFlag,
+            'fingerprint_count' => $this->fingerprintCount,
+            'face_flag' => $this->faceFlag,
         ];
     }
 }

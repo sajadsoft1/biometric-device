@@ -21,7 +21,7 @@ class Logger
         }
 
         try {
-            Log::channel(self::getChannel())->debug("Biometric: {$message}" . '  :' . json_encode($context, JSON_THROW_ON_ERROR|JSON_PRETTY_PRINT));
+            Log::channel(self::getChannel())->debug("Biometric: {$message}" . '  :' . json_encode($context, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
         } catch (JsonException) {
         }
     }
@@ -38,7 +38,7 @@ class Logger
         }
 
         try {
-            Log::channel(self::getChannel())->info("Biometric: {$message}" . '  :' . json_encode($context, JSON_THROW_ON_ERROR|JSON_PRETTY_PRINT));
+            Log::channel(self::getChannel())->info("Biometric: {$message}" . '  :' . json_encode($context, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
         } catch (JsonException) {
         }
     }
@@ -55,7 +55,7 @@ class Logger
         }
 
         try {
-            Log::channel(self::getChannel())->warning("Biometric: {$message}" . '  :' . json_encode($context, JSON_THROW_ON_ERROR|JSON_PRETTY_PRINT));
+            Log::channel(self::getChannel())->warning("Biometric: {$message}" . '  :' . json_encode($context, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
         } catch (JsonException) {
         }
     }
@@ -72,7 +72,7 @@ class Logger
         }
 
         try {
-            Log::channel(self::getChannel())->error("Biometric: {$message}" . '  :' . json_encode($context, JSON_THROW_ON_ERROR|JSON_PRETTY_PRINT));
+            Log::channel(self::getChannel())->error("Biometric: {$message}" . '  :' . json_encode($context, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
         } catch (JsonException) {
         }
     }

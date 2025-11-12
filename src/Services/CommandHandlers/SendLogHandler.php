@@ -26,7 +26,7 @@ class SendLogHandler extends BaseCommandHandler
         $attendanceDTO = $this->mapper->mapToAttendanceDTO($data);
 
         $this->log('SendLogHandler:Attendance log received', [
-            'pure'   => $data,
+            'pure' => $data,
             'mapped' => $attendanceDTO->toArray(),
         ]);
 

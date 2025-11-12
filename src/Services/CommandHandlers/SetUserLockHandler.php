@@ -19,7 +19,7 @@ class SetUserLockHandler extends BaseCommandHandler
         $result = $data['result'] ?? false;
 
         $this->log('SetUserLockHandler:Set user lock response', [
-            'pure'    => $data,
+            'pure' => $data,
             'success' => $result,
         ]);
 

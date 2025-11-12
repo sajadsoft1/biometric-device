@@ -28,14 +28,14 @@ readonly class AttendanceDTO
     public function toArray(): array
     {
         return [
-            'employee_id'       => $this->employeeId,
-            'employee_name'     => $this->employeeName,
-            'timestamp'         => $this->timestamp->toIso8601String(),
+            'employee_id' => $this->employeeId,
+            'employee_name' => $this->employeeName,
+            'timestamp' => $this->timestamp->toIso8601String(),
             'verification_type' => $this->verificationType->value,
-            'is_check_in'       => $this->isCheckIn,
-            'device_serial'     => $this->deviceSerial,
-            'event_type'        => $this->eventType?->value,
-            'event_type_label'  => $this->eventType?->title(),
+            'is_check_in' => $this->isCheckIn,
+            'device_serial' => $this->deviceSerial,
+            'event_type' => $this->eventType?->value,
+            'event_type_label' => $this->eventType?->title(),
         ];
     }
 }

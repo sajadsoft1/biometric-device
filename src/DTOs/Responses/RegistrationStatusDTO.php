@@ -32,16 +32,16 @@ readonly class RegistrationStatusDTO
     {
         return [
             'device_serial' => $this->deviceSerial,
-            'result'        => $this->result,
-            'status'        => $this->status,
-            'status_label'  => $this->getStatusLabel(),
-            'message'       => $this->message,
-            'is_cancelled'  => $this->isCancelled,
-            'timestamp'     => $this->timestamp->toIso8601String(),
-            'employee_id'   => $this->employeeId,
-            'backup_num'    => $this->backupNum,
-            'image'         => $this->image,
-            'raw_data'      => $this->rawData,
+            'result' => $this->result,
+            'status' => $this->status,
+            'status_label' => $this->getStatusLabel(),
+            'message' => $this->message,
+            'is_cancelled' => $this->isCancelled,
+            'timestamp' => $this->timestamp->toIso8601String(),
+            'employee_id' => $this->employeeId,
+            'backup_num' => $this->backupNum,
+            'image' => $this->image,
+            'raw_data' => $this->rawData,
         ];
     }
 
@@ -53,10 +53,10 @@ readonly class RegistrationStatusDTO
         }
 
         return match ($this->status) {
-            1       => 'اولین اسکن اثر انگشت',
-            2       => 'دومین اسکن اثر انگشت',
-            3       => 'سومین اسکن اثر انگشت',
-            100     => 'ثبت موفقیت‌آمیز',
+            1 => 'اولین اسکن اثر انگشت',
+            2 => 'دومین اسکن اثر انگشت',
+            3 => 'سومین اسکن اثر انگشت',
+            100 => 'ثبت موفقیت‌آمیز',
             default => 'نامشخص',
         };
     }
@@ -119,10 +119,10 @@ readonly class RegistrationStatusDTO
         }
 
         return match ($this->status) {
-            1       => 'لطفاً اولین بار انگشت خود را روی سنسور قرار دهید',
-            2       => 'لطفاً دومین بار انگشت خود را روی سنسور قرار دهید',
-            3       => 'لطفاً سومین بار انگشت خود را روی سنسور قرار دهید',
-            100     => 'اثر انگشت با موفقیت ثبت شد',
+            1 => 'لطفاً اولین بار انگشت خود را روی سنسور قرار دهید',
+            2 => 'لطفاً دومین بار انگشت خود را روی سنسور قرار دهید',
+            3 => 'لطفاً سومین بار انگشت خود را روی سنسور قرار دهید',
+            100 => 'اثر انگشت با موفقیت ثبت شد',
             default => 'در حال پردازش...',
         };
     }
@@ -138,10 +138,10 @@ readonly class RegistrationStatusDTO
         }
 
         return match ($this->status) {
-            1       => 33,  // اولین اسکن
-            2       => 66,  // دومین اسکن
-            3       => 90,  // سومین اسکن
-            100     => 100, // کامل شده
+            1 => 33,  // اولین اسکن
+            2 => 66,  // دومین اسکن
+            3 => 90,  // سومین اسکن
+            100 => 100, // کامل شده
             default => 0,
         };
     }

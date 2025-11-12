@@ -20,7 +20,7 @@ readonly class GetUserInfoDTO
     {
         return [
             'employee_id' => $this->employeeId,
-            'backupnum'   => $this->biometricType?->value,
+            'backupnum' => $this->biometricType?->value,
         ];
     }
 }

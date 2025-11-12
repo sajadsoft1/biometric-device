@@ -49,7 +49,7 @@ class DeviceCommand extends Model
             'send_status' => 'boolean',
             'error_count' => 'integer',
             'executed_at' => 'datetime',
-            'status'      => DeviceCommandStatusEnum::class,
+            'status' => DeviceCommandStatusEnum::class,
         ];
     }
 
@@ -102,7 +102,7 @@ class DeviceCommand extends Model
     public function markAsSent(): bool
     {
         return $this->update([
-            'status'      => DeviceCommandStatusEnum::SENT,
+            'status' => DeviceCommandStatusEnum::SENT,
             'send_status' => true,
         ]);
     }
@@ -112,9 +112,9 @@ class DeviceCommand extends Model
     {
         try {
             return $this->update([
-                'status'      => DeviceCommandStatusEnum::SUCCESS,
+                'status' => DeviceCommandStatusEnum::SUCCESS,
                 'executed_at' => now(),
-                'response'    => $responseData ? json_encode(array_diff_key($responseData, array_flip(['record', 'secret'])), JSON_THROW_ON_ERROR) : null,
+                'response' => $responseData ? json_encode(array_diff_key($responseData, array_flip(['record', 'secret'])), JSON_THROW_ON_ERROR) : null,
             ]);
         } catch (JsonException $e) {
             Logger::error("Failed to encode response data for DeviceCommand ID {$this->id}: " . $e->getMessage());
@@ -127,11 +127,11 @@ class DeviceCommand extends Model
     public function markAsFailed(?string $errorMessage = null, ?array $responseData = null): bool
     {
         return $this->update([
-            'status'        => DeviceCommandStatusEnum::FAILED,
-            'error_count'   => $this->error_count + 1,
+            'status' => DeviceCommandStatusEnum::FAILED,
+            'error_count' => $this->error_count + 1,
             'error_message' => $errorMessage,
-            'executed_at'   => now(),
-            'response'      => $responseData ? json_encode($responseData) : null,
+            'executed_at' => now(),
+            'response' => $responseData ? json_encode($responseData) : null,
         ]);
     }
 

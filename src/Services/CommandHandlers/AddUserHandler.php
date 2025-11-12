@@ -45,16 +45,16 @@ class AddUserHandler extends BaseCommandHandler
             return null;
         }
 
-        $enrollId  = $data['enrollid'] ?? 0;
+        $enrollId = $data['enrollid'] ?? 0;
         $backupNum = $data['backupnum'] ?? 0;
-        $result    = $data['result'] ?? false;
+        $result = $data['result'] ?? false;
 
         $this->log('AddUserHandler: Fingerprint enrollment initiated', [
             'device_serial' => $serialNum,
-            'employee_id'   => $enrollId,
-            'backup_num'    => $backupNum,
-            'result'        => $result,
-            'raw_data'      => $data,
+            'employee_id' => $enrollId,
+            'backup_num' => $backupNum,
+            'result' => $result,
+            'raw_data' => $data,
         ]);
 
         // بروزرسانی وضعیت دستور در دیتابیس

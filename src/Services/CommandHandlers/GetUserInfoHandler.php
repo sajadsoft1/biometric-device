@@ -27,7 +27,7 @@ class GetUserInfoHandler extends BaseCommandHandler
         $userDTO = $this->mapper->mapToUserDTO($data);
 
         $this->log('GetUserInfoHandler:User info received', [
-            'pure'   => $data,
+            'pure' => $data,
             'mapped' => $userDTO->toArray(),
         ]);
 

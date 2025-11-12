@@ -41,7 +41,7 @@ class CleanLogHandler extends BaseCommandHandler
         $result = $data['result'] ?? false;
 
         $this->log('CleanLogHandler:Clean log response received', [
-            'pure'    => $data,
+            'pure' => $data,
             'success' => $result,
         ]);
 

@@ -23,9 +23,9 @@ class EnrollFingerprintDTO
     public function toArray(): array
     {
         return [
-            'employee_id'    => $this->employeeId,
+            'employee_id' => $this->employeeId,
             'biometric_type' => $this->biometricType->value,
-            'flag'           => $this->flag,
+            'flag' => $this->flag,
         ];
     }
 }

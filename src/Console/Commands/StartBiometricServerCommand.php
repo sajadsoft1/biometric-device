@@ -20,8 +20,8 @@ class StartBiometricServerCommand extends Command
     public function handle(): int
     {
         $driver = $this->option('driver') ?: config('biometric-devices.default_driver', 'websocket');
-        $host   = $this->option('host') ?: config('biometric-devices.websocket.host', '0.0.0.0');
-        $port   = (int) ($this->option('port') ?: config('biometric-devices.websocket.port', 7788));
+        $host = $this->option('host') ?: config('biometric-devices.websocket.host', '0.0.0.0');
+        $port = (int) ($this->option('port') ?: config('biometric-devices.websocket.port', 7788));
 
         $this->info('Starting biometric server...');
         $this->info("Driver: {$driver}");

@@ -13,7 +13,7 @@ return [
     |.
     */
 
-    'default_driver'      => env('BIOMETRIC_DRIVER', 'websocket'),
+    'default_driver' => env('BIOMETRIC_DRIVER', 'websocket'),
 
     /*
     |--------------------------------------------------------------------------
@@ -33,7 +33,7 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    'websocket'           => [
+    'websocket' => [
         'host' => env('BIOMETRIC_WS_HOST', '0.0.0.0'),
         'port' => env('BIOMETRIC_WS_PORT', 7788),
     ],
@@ -44,8 +44,8 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    'tcp'                 => [
-        'port'    => env('BIOMETRIC_TCP_PORT', 4370),
+    'tcp' => [
+        'port' => env('BIOMETRIC_TCP_PORT', 4370),
         'timeout' => env('BIOMETRIC_TCP_TIMEOUT', 30),
     ],
 
@@ -58,11 +58,11 @@ return [
     |
     */
 
-    'mappers'             => [
+    'mappers' => [
         'aiface-websocket' => Sajadsoft\BiometricDevices\Services\DataMappers\AIFaceWebSocketMapper::class,
-        'aiface-tcp'       => Sajadsoft\BiometricDevices\Services\DataMappers\AIFaceWebSocketMapper::class, // Same for now
+        'aiface-tcp' => Sajadsoft\BiometricDevices\Services\DataMappers\AIFaceWebSocketMapper::class, // Same for now
         'zkteco-websocket' => Sajadsoft\BiometricDevices\Services\DataMappers\AIFaceWebSocketMapper::class, // Compatible with AIFace
-        'zkteco-tcp'       => Sajadsoft\BiometricDevices\Services\DataMappers\AIFaceWebSocketMapper::class, // Compatible with AIFace
+        'zkteco-tcp' => Sajadsoft\BiometricDevices\Services\DataMappers\AIFaceWebSocketMapper::class, // Compatible with AIFace
     ],
 
     /*
@@ -74,7 +74,7 @@ return [
     |.
     */
 
-    'custom_mappers'      => [
+    'custom_mappers' => [
         // 'my-device' => \App\Mappers\MyDeviceMapper::class,
     ],
 
@@ -84,10 +84,10 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    'logging'             => [
+    'logging' => [
         'enabled' => env('BIOMETRIC_LOG_ENABLED', false),
         'channel' => env('BIOMETRIC_LOG_CHANNEL', 'daily'),
-        'level'   => env('BIOMETRIC_LOG_LEVEL', 'info'),
+        'level' => env('BIOMETRIC_LOG_LEVEL', 'info'),
     ],
 
     /*
@@ -99,10 +99,10 @@ return [
     |.
     */
 
-    'queue'               => [
-        'enabled'    => env('BIOMETRIC_QUEUE_ENABLED', false),
+    'queue' => [
+        'enabled' => env('BIOMETRIC_QUEUE_ENABLED', false),
         'connection' => env('BIOMETRIC_QUEUE_CONNECTION', 'redis'),
-        'queue'      => env('BIOMETRIC_QUEUE_NAME', 'biometric-commands'),
+        'queue' => env('BIOMETRIC_QUEUE_NAME', 'biometric-commands'),
     ],
 
     /*
@@ -111,8 +111,8 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    'tasks'               => [
-        'ping_interval'          => 15, // seconds
+    'tasks' => [
+        'ping_interval' => 15, // seconds
         'command_check_interval' => 1, // seconds
     ],
 
@@ -125,9 +125,9 @@ return [
     |
     */
 
-    'models'              => [
+    'models' => [
         // Override these models in your application if needed
-        'device'         => Sajadsoft\BiometricDevices\Models\Device::class,
+        'device' => Sajadsoft\BiometricDevices\Models\Device::class,
         'device_command' => Sajadsoft\BiometricDevices\Models\DeviceCommand::class,
     ],
 ];
