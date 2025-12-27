@@ -27,4 +27,11 @@ class RegistrationStatusReceived
     public function __construct(
         public RegistrationStatusDTO $status,
     ) {}
+
+    public function toArray(): array
+    {
+        return [
+            'status' => $this->status->toArray(),
+        ];
+    }
 }

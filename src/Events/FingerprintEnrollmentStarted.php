@@ -31,4 +31,14 @@ class FingerprintEnrollmentStarted
         public int $backupNum,
         public bool $result,
     ) {}
+
+    public function toArray(): array
+    {
+        return [
+            'device_serial' => $this->deviceSerial,
+            'employee_id' => $this->employeeId,
+            'backup_num' => $this->backupNum,
+            'result' => $this->result,
+        ];
+    }
 }
