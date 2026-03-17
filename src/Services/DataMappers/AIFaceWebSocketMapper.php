@@ -12,6 +12,7 @@ use Sajadsoft\BiometricDevices\DTOs\Commands\EnrollFingerprintDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\GetLogsDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\GetUserInfoDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\OpenDoorDTO;
+use Sajadsoft\BiometricDevices\DTOs\Commands\OpenLockDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\SetDeviceLockDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\SetTimeDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\SetUserAccessDTO;
@@ -356,5 +357,15 @@ class AIFaceWebSocketMapper extends AbstractDataMapper
         } catch (Exception) {
             return now();
         }
+    }
+
+    public function mapOpenLockCommand(OpenLockDTO $dto): array
+    {
+        return [
+            'cmd' => 'openLock',
+            'cloudtime' => $dto->cloudTime->format('Y/m/d H:i:s'),
+            'LockerOpenTime' => $dto->lockerOpenTime,
+            'ControllerPort' => $dto->controllerPort,
+        ];
     }
 }

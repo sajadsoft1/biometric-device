@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Sajadsoft\BiometricDevices\Services\CommandHandlers;
 
 use Sajadsoft\BiometricDevices\DTOs\Responses\DeviceInfoDTO;
+use Sajadsoft\BiometricDevices\Enums\DeviceModel;
 use Sajadsoft\BiometricDevices\Events\DeviceConnected;
 use Sajadsoft\BiometricDevices\Models\Device;
 
@@ -42,7 +43,6 @@ class RegisterDeviceHandler extends BaseCommandHandler
     protected function saveDeviceToDatabase(string $serial, DeviceInfoDTO $deviceInfoDTO, mixed $connection): Device
     {
         $deviceModel = config('biometric-devices.models.device', Device::class);
-
         // نکته: IP و Port بعداً توسط WebSocketDeviceDriver set می‌شوند
         // در این مرحله فقط device رو با اطلاعات پایه ذخیره می‌کنیم
 
@@ -60,10 +60,16 @@ class RegisterDeviceHandler extends BaseCommandHandler
             ]);
             $device->updateDeviceInfo($newExtraAttributes);
         } else {
+            $type = DeviceModel::AI_FACE->value;
+            if (isset($deviceInfoDTO->rawData['devinfo']['manufacturer'])) {
+                $type = $deviceInfoDTO->rawData['devinfo']['manufacturer'] === DeviceModel::BORNA->value ?
+                 DeviceModel::BORNA->value : DeviceModel::AI_FACE->value;
+            }
             $device = $deviceModel::create([
                 'serial' => $serial,
                 'name' => $deviceInfoDTO->modelName,
                 'is_online' => true,
+                'type' => $type,
                 'last_connected_at' => now(),
                 'ip_address' => $deviceInfoDTO->server_dns_name,
                 'port' => $deviceInfoDTO->serverport,
