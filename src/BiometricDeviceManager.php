@@ -10,7 +10,6 @@ use Sajadsoft\BiometricDevices\Contracts\DataMapperInterface;
 use Sajadsoft\BiometricDevices\DTOs\Commands\AddUserDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\EnrollFingerprintDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\GetUserInfoDTO;
-use Sajadsoft\BiometricDevices\DTOs\Commands\OpenLockDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\SetUserAccessDTO;
 use Sajadsoft\BiometricDevices\Enums\BiometricType;
 use Sajadsoft\BiometricDevices\Enums\DeviceCommandStatusEnum;
@@ -449,12 +448,5 @@ class BiometricDeviceManager
     public function setMapper(DataMapperInterface $mapper): void
     {
         $this->mapper = $mapper;
-    }
-
-    public function openLock(string $deviceSerial, OpenLockDTO $dto): void
-    {
-        $command = $this->mapper->mapOpenLockCommand($dto);
-        
-        $this->sendRawCommand($deviceSerial, 'openLock', $command, $dto);
     }
 }

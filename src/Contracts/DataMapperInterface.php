@@ -9,7 +9,6 @@ use Sajadsoft\BiometricDevices\DTOs\Commands\DeleteUserDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\GetLogsDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\GetUserInfoDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\OpenDoorDTO;
-use Sajadsoft\BiometricDevices\DTOs\Commands\OpenLockDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\SetDeviceLockDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\SetTimeDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\SetUserAccessDTO;
@@ -70,6 +69,4 @@ interface DataMapperInterface
     // Attendance Logs
     /** Map GetLogsDTO to device command format */
     public function mapGetLogsCommand(GetLogsDTO $dto, string $commandName): array;
-
-    public function mapOpenLockCommand(OpenLockDTO $dto): array;
 }

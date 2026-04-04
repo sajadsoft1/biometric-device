@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Sajadsoft\BiometricDevices\Services\DeviceDrivers;
 
 use Illuminate\Console\Command;
-use Log;
 use Sajadsoft\BiometricDevices\Contracts\DeviceDriverInterface;
 use Sajadsoft\BiometricDevices\Services\Pipelines\MessagePipeline;
 use Sajadsoft\BiometricDevices\Support\Logger;
@@ -81,8 +80,6 @@ abstract class AbstractDeviceDriver implements DeviceDriverInterface
             'connection' => $connection,
             'device_serial' => $deviceSerial,
         ];
-
-        Log::debug('THE CONTEXT', $context);
 
         // پردازش از طریق pipeline
         return $this->pipeline->process($context, function ($context) {

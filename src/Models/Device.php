@@ -15,7 +15,7 @@ use Sajadsoft\BiometricDevices\Enums\DeviceModel;
  * @property int                 $id
  * @property string              $serial
  * @property string              $name
- * @property DeviceModel         $type
+ * @property string              $type
  * @property string|null         $ip_address
  * @property int|null            $port
  * @property bool                $is_online

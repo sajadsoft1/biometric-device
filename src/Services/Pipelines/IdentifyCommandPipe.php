@@ -20,7 +20,6 @@ class IdentifyCommandPipe
 
         // تشخیص نوع command
         $commandValue = $data['cmd'] ?? $data['ret'] ?? null;
-        // dd($context);
 
         try {
             $context['command'] = DeviceCommand::from($commandValue);

@@ -13,7 +13,6 @@ use Sajadsoft\BiometricDevices\DTOs\Commands\DeleteUserDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\GetLogsDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\GetUserInfoDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\OpenDoorDTO;
-use Sajadsoft\BiometricDevices\DTOs\Commands\OpenLockDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\SetDeviceLockDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\SetTimeDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\SetUserAccessDTO;
@@ -818,13 +817,6 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
         $command = app(DataMapperInterface::class)->mapGetLogsCommand($dto, 'getnewlog');
 
         return $this->sendRawCommand($deviceSerial, 'getnewlog', $command);
-    }
-
-    public function sendOpenLock(string $deviceSerial, OpenLockDTO $dto): bool
-    {
-        $command = app(DataMapperInterface::class)->mapOpenLockCommand($dto);
-
-        return $this->sendRawCommand($deviceSerial, 'openLock', $command);
     }
 
     /** Send raw command to device */
