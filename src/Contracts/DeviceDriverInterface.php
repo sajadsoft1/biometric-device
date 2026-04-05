@@ -9,6 +9,7 @@ use Sajadsoft\BiometricDevices\DTOs\Commands\DeleteUserDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\GetLogsDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\GetUserInfoDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\OpenDoorDTO;
+use Sajadsoft\BiometricDevices\DTOs\Commands\OpenLockDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\SetDeviceLockDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\SetTimeDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\SetUserAccessDTO;
@@ -75,6 +76,8 @@ interface DeviceDriverInterface
 
     /** Send get new logs command using DTO */
     public function sendGetNewLogs(string $deviceSerial, GetLogsDTO $dto): bool;
+
+    public function sendOpenLock(string $deviceSerial, OpenLockDTO $dto): bool;
 
     // ============================================
     // Utilities

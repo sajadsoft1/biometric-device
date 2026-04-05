@@ -9,6 +9,8 @@ enum DeviceModel: string
     case AI_FACE = 'aiface';
     case ZK_TECO = 'zkteco';
 
+    case BORNA = 'BORNA';
+
     /** Get the mapper class for this device model */
     public function getMapperClass(string $protocol = 'websocket'): string
     {
@@ -24,6 +26,7 @@ enum DeviceModel: string
         return match ($this) {
             self::AI_FACE => 'AI Face',
             self::ZK_TECO => 'ZK Teco',
+            self::BORNA => 'BORNA-Controller',
         };
     }
 
