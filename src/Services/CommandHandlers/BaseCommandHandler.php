@@ -36,7 +36,7 @@ abstract class BaseCommandHandler implements CommandHandlerInterface
     /** Log handler activity */
     protected function log(string $message, array $context = []): void
     {
-        Logger::debug("[{$this->getCommandName()}] {$message}" . '  :' . json_encode($context, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
+        Logger::debug("[{$this->getCommandName()}] {$message}", $context);
     }
 
     /** Get device serial from data */
@@ -60,28 +60,27 @@ abstract class BaseCommandHandler implements CommandHandlerInterface
         $commandModel = config('biometric-devices.models.device_command', DeviceCommand::class);
 
         // بررسی وجود Model ها
-        if ( ! class_exists($deviceModel) || ! class_exists($commandModel)) {
+        if (! class_exists($deviceModel) || ! class_exists($commandModel)) {
             return false;
         }
 
         // پیدا کردن دستگاه
         $device = $deviceModel::where('serial', $deviceSerial)->first();
 
-        if ( ! $device) {
+        if (! $device) {
             return false;
         }
 
-        // پیدا کردن آخرین command با وضعیت Pending یا Sent
-        $command = $commandModel::where('device_id', $device->id)
-            ->where('command_name', $commandName)
-            ->whereIn('status', [
-                DeviceCommandStatusEnum::PENDING,
-                DeviceCommandStatusEnum::SENT,
-            ])
-            ->latest('id')
+        $query = $commandModel::where('device_id', $device->id)
+            ->where('command_name', $commandName);
+
+        // A response belongs to the oldest command that was actually sent.
+        $command = $query
+            ->where('status', DeviceCommandStatusEnum::SENT)
+            ->oldest('id')
             ->first();
 
-        if ( ! $command) {
+        if (! $command) {
             return false;
         }
 

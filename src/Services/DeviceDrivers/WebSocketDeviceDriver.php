@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Sajadsoft\BiometricDevices\Services\DeviceDrivers;
 
-use Exception;
 use JsonException;
 use RuntimeException;
 use Sajadsoft\BiometricDevices\Contracts\DataMapperInterface;
@@ -20,6 +19,7 @@ use Sajadsoft\BiometricDevices\DTOs\Commands\SetUserAccessDTO;
 use Sajadsoft\BiometricDevices\Enums\DeviceCommandStatusEnum;
 use Sajadsoft\BiometricDevices\Events\DeviceDisconnected;
 use Sajadsoft\BiometricDevices\Support\Logger;
+use Throwable;
 
 /**
  * WebSocket driver for biometric devices
@@ -36,6 +36,12 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
 
     protected array $messageBuffer = []; // Buffer for incomplete messages/frames
 
+    protected array $fragmentedMessages = []; // Buffer WebSocket-level fragmented messages
+
+    protected array $fragmentedOpcodes = []; // Original opcode for fragmented messages
+
+    protected array $socketIds = []; // Cached peer identifier by Socket object ID
+
     protected float $lastPingTime;
 
     protected float $lastCommandCheckTime;
@@ -43,6 +49,8 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
     protected array $lastActivityTime = []; // Track last activity time for each socket
 
     protected array $awaitingPong = []; // Track sockets waiting for pong response
+
+    protected bool $running = false;
 
     /** Start WebSocket server */
     public function start(string $host, int $port): void
@@ -52,23 +60,24 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
         // ایجاد socket
         $this->socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
 
-        if ( ! $this->socket) {
+        if (! $this->socket) {
             throw new RuntimeException('Failed to create socket');
         }
 
         socket_set_option($this->socket, SOL_SOCKET, SO_REUSEADDR, 1);
 
-        if ( ! socket_bind($this->socket, $host, $port)) {
+        if (! socket_bind($this->socket, $host, $port)) {
             throw new RuntimeException("Failed to bind to {$host}:{$port}");
         }
 
-        if ( ! socket_listen($this->socket, 5)) {
+        if (! socket_listen($this->socket, max(5, (int) config('biometric-devices.websocket.backlog', 128)))) {
             throw new RuntimeException('Failed to listen on socket');
         }
 
         $this->sockets[] = $this->socket;
         $this->lastPingTime = microtime(true);
         $this->lastCommandCheckTime = microtime(true);
+        $this->running = true;
 
         $this->info('WebSocket server started successfully!');
         $this->info('Waiting for device connections...');
@@ -80,22 +89,42 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
     /** Main server loop */
     protected function mainLoop(): void
     {
-        while (true) {
+        while ($this->running) {
             $read = $this->sockets;
             $write = null;
             $except = null;
 
-            if (socket_select($read, $write, $except, 0, 100000) > 0) {
+            $selected = @socket_select($read, $write, $except, 0, 100000);
+
+            if ($selected === false) {
+                $errorCode = socket_last_error($this->socket);
+                $this->error("Socket select failed: code={$errorCode}, message=".socket_strerror($errorCode));
+                socket_clear_error($this->socket);
+                usleep(100000);
+
+                continue;
+            }
+
+            if ($selected > 0) {
                 foreach ($read as $sock) {
-                    if ($sock === $this->socket) {
-                        $this->handleNewConnection();
-                    } else {
-                        $this->handleSocketActivity($sock);
+                    try {
+                        if ($sock === $this->socket) {
+                            $this->handleNewConnection();
+                        } else {
+                            $this->handleSocketActivity($sock);
+                        }
+                    } catch (Throwable $exception) {
+                        $socketId = $sock === $this->socket ? 'server' : $this->getSocketId($sock);
+                        $this->error("Unhandled socket error for {$socketId}: {$exception->getMessage()}");
                     }
                 }
             }
 
-            $this->performPeriodicTasks();
+            try {
+                $this->performPeriodicTasks();
+            } catch (Throwable $exception) {
+                $this->error("Periodic task failed: {$exception->getMessage()}");
+            }
         }
     }
 
@@ -104,7 +133,7 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
     {
         $clientSocket = socket_accept($this->socket);
 
-        if ( ! $clientSocket) {
+        if (! $clientSocket) {
             return;
         }
 
@@ -121,150 +150,177 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
         $this->lastActivityTime[$socketId] = microtime(true);
     }
 
-    /**
-     * Handle socket activity (data received)
-     * Based on working reference implementation
-     * @throws JsonException
-     */
+    /** Handle socket activity (data received). */
     protected function handleSocketActivity($socket): void
     {
-        // Clear any previous errors before reading
         socket_clear_error($socket);
 
-        $frame = @socket_read($socket, 4096);
+        $frame = @socket_read($socket, $this->readChunkBytes());
 
-        // Check for actual disconnection vs no data available
-        if ($frame === false || $frame === '') {
+        if ($frame === false) {
             $errorCode = socket_last_error($socket);
 
-            // EAGAIN (11) or EWOULDBLOCK (10035 on Windows) means no data available, not disconnected.
-            if (in_array($errorCode, [], true)) {
-                // No data available right now, but connection is still alive
+            if ($this->isTransientSocketError($errorCode)) {
                 socket_clear_error($socket);
 
                 return;
             }
 
-            // Real disconnection occurred
             $socketId = $this->getSocketId($socket);
-            $this->debug("Socket error detected: code={$errorCode} for {$socketId}");
-            $this->handleDisconnection($socket);
+            $this->warn("Socket read failed: socket={$socketId}, code={$errorCode}, message=".socket_strerror($errorCode));
+            $this->handleDisconnection($socket, 'read_error', $errorCode);
+
+            return;
+        }
+
+        if ($frame === '') {
+            $this->handleDisconnection($socket, 'peer_closed');
 
             return;
         }
 
         $socketId = $this->getSocketId($socket);
+        $this->lastActivityTime[$socketId] = microtime(true);
 
-        // WebSocket handshake
-        if ( ! ($this->handshakeComplete[$socketId] ?? false)) {
-            if ($this->performHandshake($socket, $frame)) {
-                $this->handshakeComplete[$socketId] = true;
-                socket_getpeername($socket, $address, $port);
-                $this->info("WebSocket handshake completed for {$address}:{$port}");
+        if (! ($this->handshakeComplete[$socketId] ?? false)) {
+            $handshakeBuffer = ($this->messageBuffer[$socketId] ?? '').$frame;
+            $headerEnd = strpos($handshakeBuffer, "\r\n\r\n");
+
+            if ($headerEnd === false) {
+                if (strlen($handshakeBuffer) > $this->maxHandshakeBytes()) {
+                    $this->warn("WebSocket handshake exceeded maximum size for {$socketId}");
+                    $this->handleDisconnection($socket, 'handshake_too_large');
+
+                    return;
+                }
+
+                $this->messageBuffer[$socketId] = $handshakeBuffer;
+
+                return;
             }
 
-            return;
+            $httpHeaderLength = $headerEnd + 4;
+            $httpHeader = substr($handshakeBuffer, 0, $httpHeaderLength);
+            $remainingData = substr($handshakeBuffer, $httpHeaderLength);
+
+            if ($this->performHandshake($socket, $httpHeader)) {
+                $this->handshakeComplete[$socketId] = true;
+                $this->messageBuffer[$socketId] = '';
+                socket_getpeername($socket, $address, $port);
+                $this->info("WebSocket handshake completed for {$address}:{$port}");
+            } else {
+                $this->handleDisconnection($socket, 'invalid_handshake');
+
+                return;
+            }
+
+            if ($remainingData === '') {
+                return;
+            }
+
+            $frame = $remainingData;
         }
 
-        // Get existing buffer for this socket
         $dataRec = $this->messageBuffer[$socketId] ?? '';
+        $dataRec .= $frame;
         $dataLen = strlen($dataRec);
 
-        // Append new frame data to buffer
-        $size = strlen($frame);
-        $dataRec .= $frame;
-        $dataLen += $size;
-
-        $needLen = 2; // Frame header minimum size
-
-        // Process all complete frames in buffer
-        while ($dataLen > $needLen) {
-            // Parse frame header
+        while ($dataLen >= 2) {
+            $fin = (ord($dataRec[0]) & 0x80) !== 0;
             $opcode = ord($dataRec[0]) & 15;
             $b2 = ord($dataRec[1]);
             $mask = ($b2 & 128) !== 0;
             $payloadLength = $b2 & 127;
+            $headerLength = 2;
 
-            // Calculate extended payload length size
             if ($payloadLength === 126) {
-                $needLen += 2;
-            } elseif ($payloadLength > 126) {
-                $needLen += 8;
+                $headerLength += 2;
+            } elseif ($payloadLength === 127) {
+                $headerLength += 8;
             }
 
-            if ($dataLen < $needLen) {
-                break; // Need more data for header
+            if ($dataLen < $headerLength) {
+                break;
             }
 
             $nDataPos = 2;
 
-            // Read extended payload length
             if ($payloadLength === 126) {
-                $payloadLength = ord($dataRec[$nDataPos + 1]) + (ord($dataRec[$nDataPos]) << 8);
+                $unpackedLength = unpack('nlength', substr($dataRec, $nDataPos, 2));
+                $payloadLength = $unpackedLength['length'];
                 $nDataPos += 2;
-            } elseif ($payloadLength > 126) {
-                $payloadLength = ord($dataRec[$nDataPos + 7]) +
-                    (ord($dataRec[$nDataPos + 6]) << 8) +
-                    (ord($dataRec[$nDataPos + 5]) << 16) +
-                    (ord($dataRec[$nDataPos + 4]) << 24);
+            } elseif ($payloadLength === 127) {
+                $unpackedLength = unpack('Nhigh/Nlow', substr($dataRec, $nDataPos, 8));
+
+                if ($unpackedLength['high'] !== 0) {
+                    $this->warn("WebSocket payload is too large for {$socketId}");
+                    $this->handleDisconnection($socket, 'payload_too_large');
+
+                    return;
+                }
+
+                $payloadLength = $unpackedLength['low'];
                 $nDataPos += 8;
             }
 
-            // Validate payload length
-            if ($payloadLength < 0 || $payloadLength >= 1024 * 1024 * 2) {
+            if ($payloadLength > $this->maxPayloadBytes()) {
                 $this->warn("Invalid payload length: {$payloadLength} from {$socketId}");
+                $this->handleDisconnection($socket, 'payload_too_large');
 
+                return;
+            }
+
+            $totalFrameLength = $headerLength + ($mask ? 4 : 0) + $payloadLength;
+
+            if ($dataLen < $totalFrameLength) {
                 break;
             }
 
-            // Calculate total frame size
-            $needLen += ($mask ? 4 : 0);
-            $needLen += $payloadLength;
-
-            if ($dataLen < $needLen) {
-                // Need more data for complete frame
-                break;
-            }
-
-            // Extract payload
-            $packet = '';
             if ($mask) {
                 $maskPos = $nDataPos;
                 $nDataPos += 4;
-
-                for ($i = 0; $i < $payloadLength; $i++) {
-                    $packet .= ($dataRec[$i + $nDataPos] ^ $dataRec[$maskPos + $i % 4]);
-                }
+                $maskingKey = substr($dataRec, $maskPos, 4);
+                $maskedPayload = substr($dataRec, $nDataPos, $payloadLength);
+                $repeatedMask = substr(str_repeat($maskingKey, (int) ceil($payloadLength / 4)), 0, $payloadLength);
+                $packet = $maskedPayload ^ $repeatedMask;
             } else {
                 $packet = substr($dataRec, $nDataPos, $payloadLength);
             }
-            $nDataPos += $payloadLength;
 
-            // Process complete frame
-            $this->processFrame($packet, $socket, $socketId, $opcode);
-
-            // Remove processed frame from buffer
-            if ($nDataPos === $dataLen) {
-                $dataRec = '';
-                $dataLen = 0;
-            } else {
-                $dataRec = substr($dataRec, $nDataPos, $dataLen - $nDataPos);
-                $dataLen -= $nDataPos;
+            try {
+                $this->processFrame($packet, $socket, $socketId, $opcode, $fin);
+            } catch (Throwable $exception) {
+                $this->error("Failed to process WebSocket frame for {$socketId}: {$exception->getMessage()}");
             }
 
-            $needLen = 2; // Reset for next frame
+            $dataRec = substr($dataRec, $totalFrameLength);
+            $dataLen = strlen($dataRec);
         }
 
-        // Save remaining buffer
+        if ($dataLen > $this->maxBufferBytes()) {
+            $this->warn("WebSocket buffer exceeded maximum size for {$socketId}");
+            $this->handleDisconnection($socket, 'buffer_too_large');
+
+            return;
+        }
+
         $this->messageBuffer[$socketId] = $dataRec;
     }
 
     /** Process a complete WebSocket frame
      * @throws JsonException
      */
-    protected function processFrame(string $packet, $socket, string $socketId, int $opcode): void
+    protected function processFrame(string $packet, $socket, string $socketId, int $opcode, bool $fin = true): void
     {
         $this->lastActivityTime[$socketId] = microtime(true);
+        unset($this->awaitingPong[$socketId]);
+
+        if ($opcode >= 8 && (! $fin || strlen($packet) > 125)) {
+            $this->warn("Invalid WebSocket control frame from {$socketId}");
+            $this->handleDisconnection($socket, 'invalid_control_frame');
+
+            return;
+        }
 
         // Handle close frame (opcode 0x8)
         if ($opcode === 8) {
@@ -285,12 +341,46 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
 
         // Handle ping from device
         if ($opcode === 9) {
-            $this->sendPong($socket);
+            $this->sendPong($socket, $packet);
 
             return;
         }
 
-        // Only process text frames
+        if ($opcode === 0) {
+            if (! isset($this->fragmentedMessages[$socketId], $this->fragmentedOpcodes[$socketId])) {
+                $this->warn("Unexpected continuation frame from {$socketId}");
+
+                return;
+            }
+
+            $this->fragmentedMessages[$socketId] .= $packet;
+
+            if (strlen($this->fragmentedMessages[$socketId]) > $this->maxPayloadBytes()) {
+                $this->handleDisconnection($socket, 'fragmented_payload_too_large');
+
+                return;
+            }
+
+            if (! $fin) {
+                return;
+            }
+
+            $packet = $this->fragmentedMessages[$socketId];
+            $opcode = $this->fragmentedOpcodes[$socketId];
+            unset($this->fragmentedMessages[$socketId], $this->fragmentedOpcodes[$socketId]);
+        } elseif (! $fin) {
+            if ($opcode !== 1 && $opcode !== 2) {
+                $this->warn("Unsupported fragmented opcode {$opcode} from {$socketId}");
+
+                return;
+            }
+
+            $this->fragmentedMessages[$socketId] = $packet;
+            $this->fragmentedOpcodes[$socketId] = $opcode;
+
+            return;
+        }
+
         if ($opcode !== 1) {
             $this->debug("Unknown opcode {$opcode} from {$socketId}");
 
@@ -302,61 +392,45 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
             return;
         }
 
-        // Parse JSON: simple approach like reference implementation
         $data = json_decode($packet, true, 512, JSON_THROW_ON_ERROR);
 
-        if ( ! is_array($data)) {
+        if (! is_array($data)) {
             $this->warn("Invalid JSON from socket {$socketId}");
-            $this->debug('Payload length: ' . strlen($packet));
+            $this->debug('Payload length: '.strlen($packet));
 
             return;
         }
 
-        // پردازش از طریق pipeline
-        $deviceSerial = $this->socketToSerial[$socketId] ?? null;
-        $response = $this->processMessage($data, $socket, $deviceSerial);
-
-        // ذخیره serial number برای این socket
         if (isset($data['sn'])) {
-            $serialNumber = $data['sn'];
-
-            // بررسی اینکه آیا این serial number قبلاً با socket دیگری register شده
-            $oldSocketId = null;
-            foreach ($this->socketToSerial as $sid => $sn) {
-                if ($sn === $serialNumber && $sid !== $socketId) {
-                    $oldSocketId = $sid;
-
-                    break;
-                }
-            }
-
-            // اگر socket قدیمی پیدا شد، آن را close کن
-            if ($oldSocketId) {
-                $this->info("Device {$serialNumber} reconnected with new socket, closing old connection {$oldSocketId}");
-
-                foreach ($this->sockets as $sock) {
-                    if ($this->getSocketId($sock) === $oldSocketId && $sock !== $this->socket) {
-                        $this->handleDisconnection($sock);
-
-                        break;
-                    }
-                }
-            }
-
-            $this->socketToSerial[$socketId] = $serialNumber;
-            $this->connectedDevices[$socketId] = $serialNumber;
+            $this->registerSocketSerial($socket, $socketId, (string) $data['sn']);
         }
 
-        // ارسال پاسخ
+        $deviceSerial = $this->socketToSerial[$socketId] ?? null;
+        $handlerStartedAt = microtime(true);
+        $response = $this->processMessage($data, $socket, $deviceSerial);
+        $handlerDurationMilliseconds = (microtime(true) - $handlerStartedAt) * 1000;
+
+        if ($handlerDurationMilliseconds >= $this->slowHandlerThresholdMilliseconds()) {
+            $commandName = (string) ($data['cmd'] ?? $data['ret'] ?? 'unknown');
+            $this->warn(sprintf(
+                'Slow message handler: command=%s, serial=%s, duration_ms=%.2f',
+                $commandName,
+                $deviceSerial ?? 'unknown',
+                $handlerDurationMilliseconds
+            ));
+        }
+
         if ($response) {
-            $this->sendMessage($socket, $response);
+            if (! $this->sendMessage($socket, $response)) {
+                $this->handleDisconnection($socket, 'response_write_failed');
+            }
         }
     }
 
     /** Perform WebSocket handshake */
     protected function performHandshake($socket, $buffer): bool
     {
-        if ( ! str_contains($buffer, 'Sec-WebSocket-Key:')) {
+        if (! str_contains($buffer, 'Sec-WebSocket-Key:')) {
             return false;
         }
 
@@ -364,7 +438,7 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
         $keyEnd = strpos($buffer, "\r\n", $keyStart);
         $key = trim(substr($buffer, $keyStart, $keyEnd - $keyStart));
 
-        $acceptKey = base64_encode(sha1($key . '258EAFA5-E914-47DA-95CA-C5AB0DC85B11', true));
+        $acceptKey = base64_encode(sha1($key.'258EAFA5-E914-47DA-95CA-C5AB0DC85B11', true));
 
         $response = "HTTP/1.1 101 Switching Protocols\r\n";
         $response .= "Upgrade: websocket\r\n";
@@ -372,15 +446,13 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
         $response .= "Connection: Upgrade\r\n";
         $response .= "Sec-WebSocket-Accept: {$acceptKey}\r\n\r\n";
 
-        socket_write($socket, $response, strlen($response));
-
-        return true;
+        return $this->writeToSocket($socket, $response, 'handshake');
     }
 
     /** Send the message to device
      * @throws JsonException
      */
-    public function sendMessage($socket, array $message): void
+    public function sendMessage($socket, array $message): bool
     {
         $json = json_encode($message, JSON_THROW_ON_ERROR);
         $length = strlen($json);
@@ -394,8 +466,105 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
             $header = pack('CCNN', $firstByte, 127, 0, $length);
         }
 
-        $frame = $header . $json;
-        socket_write($socket, $frame, strlen($frame));
+        $frame = $header.$json;
+
+        return $this->writeToSocket($socket, $frame, 'message');
+    }
+
+    /** Register a socket before closing a superseded connection for the same device. */
+    protected function registerSocketSerial($socket, string $socketId, string $serialNumber): void
+    {
+        $oldSocketIds = [];
+
+        foreach ($this->socketToSerial as $registeredSocketId => $registeredSerial) {
+            if ($registeredSerial === $serialNumber && $registeredSocketId !== $socketId) {
+                $oldSocketIds[] = $registeredSocketId;
+            }
+        }
+
+        $this->socketToSerial[$socketId] = $serialNumber;
+        $this->connectedDevices[$socketId] = $serialNumber;
+
+        foreach ($oldSocketIds as $oldSocketId) {
+            $oldSocket = $this->findSocketById($oldSocketId);
+
+            if ($oldSocket === null || $oldSocket === $socket) {
+                continue;
+            }
+
+            $this->info("Device {$serialNumber} reconnected with a new socket; closing superseded socket {$oldSocketId}");
+            $this->handleDisconnection($oldSocket, 'superseded_connection');
+        }
+    }
+
+    protected function findSocketById(string $socketId): mixed
+    {
+        foreach ($this->sockets as $socket) {
+            if ($socket !== $this->socket && $this->getSocketId($socket) === $socketId) {
+                return $socket;
+            }
+        }
+
+        return null;
+    }
+
+    /** Write the entire payload to a non-blocking socket. */
+    protected function writeToSocket($socket, string $payload, string $operation): bool
+    {
+        $payloadLength = strlen($payload);
+        $writtenBytes = 0;
+        $deadline = microtime(true) + ($this->writeTimeoutMilliseconds() / 1000);
+
+        while ($writtenBytes < $payloadLength) {
+            $written = @socket_write($socket, substr($payload, $writtenBytes));
+
+            if ($written === false) {
+                $errorCode = socket_last_error($socket);
+
+                if ($this->isTransientSocketError($errorCode) && microtime(true) < $deadline) {
+                    socket_clear_error($socket);
+
+                    if ($this->waitUntilWritable($socket, $deadline)) {
+                        continue;
+                    }
+                }
+
+                $socketId = $this->getSocketId($socket);
+                $this->warn("Socket write failed: operation={$operation}, socket={$socketId}, code={$errorCode}, message=".socket_strerror($errorCode));
+
+                return false;
+            }
+
+            if ($written === 0) {
+                if (microtime(true) >= $deadline || ! $this->waitUntilWritable($socket, $deadline)) {
+                    $this->warn("Socket write timed out: operation={$operation}, socket={$this->getSocketId($socket)}");
+
+                    return false;
+                }
+
+                continue;
+            }
+
+            $writtenBytes += $written;
+        }
+
+        return true;
+    }
+
+    protected function waitUntilWritable($socket, float $deadline): bool
+    {
+        $remainingMicroseconds = (int) max(0, min(100000, ($deadline - microtime(true)) * 1000000));
+
+        if ($remainingMicroseconds === 0) {
+            return false;
+        }
+
+        $read = null;
+        $write = [$socket];
+        $except = [$socket];
+        $selected = @socket_select($read, $write, $except, 0, $remainingMicroseconds);
+
+        return $selected > 0 && $except === [];
     }
 
     /** Find socket by device serial */
@@ -416,35 +585,107 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
         return null;
     }
 
+    protected function isTransientSocketError(int $errorCode): bool
+    {
+        $transientErrors = [11, 35, 10035];
+
+        foreach (['SOCKET_EAGAIN', 'SOCKET_EWOULDBLOCK', 'SOCKET_EINTR'] as $constantName) {
+            if (defined($constantName)) {
+                $transientErrors[] = constant($constantName);
+            }
+        }
+
+        return in_array($errorCode, array_unique($transientErrors), true);
+    }
+
+    protected function maxHandshakeBytes(): int
+    {
+        return max(1024, (int) config('biometric-devices.websocket.max_handshake_bytes', 16384));
+    }
+
+    protected function readChunkBytes(): int
+    {
+        return max(4096, (int) config('biometric-devices.websocket.read_chunk_bytes', 65536));
+    }
+
+    protected function maxPayloadBytes(): int
+    {
+        return max(1024, (int) config('biometric-devices.websocket.max_payload_bytes', 4194304));
+    }
+
+    protected function maxBufferBytes(): int
+    {
+        return max($this->maxPayloadBytes() + 14, (int) config('biometric-devices.websocket.max_buffer_bytes', 8388608));
+    }
+
+    protected function writeTimeoutMilliseconds(): int
+    {
+        return max(100, (int) config('biometric-devices.websocket.write_timeout_ms', 1000));
+    }
+
+    protected function slowHandlerThresholdMilliseconds(): int
+    {
+        return max(1, (int) config('biometric-devices.websocket.slow_handler_threshold_ms', 500));
+    }
+
+    protected function pingIntervalSeconds(): int
+    {
+        return max(1, (int) config('biometric-devices.tasks.ping_interval', 15));
+    }
+
+    protected function pingTimeoutSeconds(): int
+    {
+        return max($this->pingIntervalSeconds() + 1, (int) config('biometric-devices.tasks.ping_timeout', 60));
+    }
+
+    protected function registrationTimeoutSeconds(): int
+    {
+        return max(1, (int) config('biometric-devices.tasks.registration_timeout', 30));
+    }
+
+    protected function commandCheckIntervalSeconds(): float
+    {
+        return max(0.1, (float) config('biometric-devices.tasks.command_check_interval', 1));
+    }
+
     /** Get unique socket ID */
     protected function getSocketId($socket): string
     {
+        $objectId = spl_object_id($socket);
+
+        if (isset($this->socketIds[$objectId])) {
+            return $this->socketIds[$objectId];
+        }
+
         $address = 'unknown';
         $port = 0;
 
         try {
-            @socket_getpeername($socket, $address, $port);
-        } catch (Exception) {
-            // اگر نتونست peer name بگیره، از resource ID استفاده می‌کنیم
-            return 'socket_' . (int) $socket;
+            if (! @socket_getpeername($socket, $address, $port)) {
+                return $this->socketIds[$objectId] = "socket_{$objectId}";
+            }
+        } catch (Throwable) {
+            return $this->socketIds[$objectId] = "socket_{$objectId}";
         }
 
-        return "{$address}_{$port}";
+        return $this->socketIds[$objectId] = "{$address}_{$port}";
     }
 
-    /** Send pong */
-    protected function sendPong($socket): void
+    /** Send pong with the same application data received in ping. */
+    protected function sendPong($socket, string $payload = ''): void
     {
-        $pong = chr(0x8A) . chr(0x00);
-        socket_write($socket, $pong, strlen($pong));
+        $pong = chr(0x8A).chr(strlen($payload)).$payload;
+
+        if (! $this->writeToSocket($socket, $pong, 'pong')) {
+            $this->handleDisconnection($socket, 'pong_write_failed');
+        }
     }
 
     /** Send close frame */
     protected function sendCloseFrame($socket): void
     {
-        // Close frame: opcode `0×8` with empty payload
-        $close = chr(0x88) . chr(0x00);
-        @socket_write($socket, $close, strlen($close));
+        $close = chr(0x88).chr(0x00);
+        $this->writeToSocket($socket, $close, 'close');
     }
 
     /** Periodic tasks
@@ -460,14 +701,12 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
         // Check for unregistered devices (handshake complete but no reg command)
         $this->checkUnregisteredDevices($now);
 
-        // Ping every 15 seconds
-        if ($now - $this->lastPingTime > 15) {
+        if ($now - $this->lastPingTime > $this->pingIntervalSeconds()) {
             $this->sendPingToAll();
             $this->lastPingTime = $now;
         }
 
-        // Check commands every 1 second
-        if ($now - $this->lastCommandCheckTime > 1) {
+        if ($now - $this->lastCommandCheckTime > $this->commandCheckIntervalSeconds()) {
             $this->checkPendingCommands();
             $this->lastCommandCheckTime = $now;
         }
@@ -476,7 +715,7 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
     /** Send a ping to all connected devices */
     protected function sendPingToAll(): void
     {
-        $ping = chr(0x89) . chr(0x00);
+        $ping = chr(0x89).chr(0x00);
         $now = microtime(true);
 
         foreach ($this->sockets as $socket) {
@@ -490,11 +729,16 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
             // 1. Handshake کامل کرده‌اند
             // 2. Register شده‌اند (serial number دارند)
             if (($this->handshakeComplete[$socketId] ?? false) && isset($this->socketToSerial[$socketId])) {
-                $result = @socket_write($socket, $ping, strlen($ping));
+                if (isset($this->awaitingPong[$socketId])) {
+                    continue;
+                }
 
-                if ($result !== false) {
-                    // Mark this socket as awaiting pong response
+                $result = $this->writeToSocket($socket, $ping, 'ping');
+
+                if ($result) {
                     $this->awaitingPong[$socketId] = $now;
+                } else {
+                    $this->handleDisconnection($socket, 'ping_write_failed');
                 }
             }
         }
@@ -503,7 +747,7 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
     /** Check for connections that haven't responded to ping */
     protected function checkDeadConnections(float $now): void
     {
-        $timeout = 30; // 30 seconds timeout for pong response
+        $timeout = $this->pingTimeoutSeconds();
 
         foreach ($this->awaitingPong as $socketId => $pingTime) {
             if ($now - $pingTime > $timeout) {
@@ -513,7 +757,7 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
                 // Find and disconnect this socket
                 foreach ($this->sockets as $socket) {
                     if ($this->getSocketId($socket) === $socketId && $socket !== $this->socket) {
-                        $this->handleDisconnection($socket);
+                        $this->handleDisconnection($socket, 'pong_timeout');
 
                         break;
                     }
@@ -527,7 +771,7 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
     /** Check for devices that completed handshake but never registered */
     protected function checkUnregisteredDevices(float $now): void
     {
-        $registrationTimeout = 30; // 30 seconds to send reg command after handshake
+        $registrationTimeout = $this->registrationTimeoutSeconds();
 
         foreach ($this->handshakeComplete as $socketId => $isComplete) {
             // اگر handshake کامل شده اما هنوز reg نشده
@@ -540,7 +784,7 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
                     // Find and disconnect this socket
                     foreach ($this->sockets as $socket) {
                         if ($this->getSocketId($socket) === $socketId && $socket !== $this->socket) {
-                            $this->handleDisconnection($socket);
+                            $this->handleDisconnection($socket, 'registration_timeout');
 
                             break;
                         }
@@ -558,21 +802,68 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
         $commandModel = config('biometric-devices.models.device_command');
 
         // بررسی وجود مدل DeviceCommand
-        if ( ! class_exists($commandModel)) {
+        if (! class_exists($commandModel)) {
             return;
         }
 
-        // دریافت دستورها pending از دیتابیس
+        $this->retryTimedOutCommands($commandModel);
+
+        $inFlightDeviceIds = $commandModel::query()
+            ->where('status', DeviceCommandStatusEnum::SENT)
+            ->pluck('device_id');
+
+        $candidateLimit = max(10, (int) config('biometric-devices.tasks.command_batch_size', 10) * 10);
+
         $commands = $commandModel::query()
             ->with('device:id,serial')
             ->where('status', DeviceCommandStatusEnum::PENDING)
             ->where('send_status', false)
+            ->when($inFlightDeviceIds->isNotEmpty(), fn ($query) => $query->whereNotIn('device_id', $inFlightDeviceIds))
             ->orderBy('id')
-            ->limit(10)
-            ->get();
+            ->limit($candidateLimit)
+            ->get()
+            ->unique('device_id')
+            ->take(max(1, (int) config('biometric-devices.tasks.command_batch_size', 10)));
 
         foreach ($commands as $command) {
             $this->sendCommandFromDatabase($command);
+        }
+    }
+
+    protected function retryTimedOutCommands(string $commandModel): void
+    {
+        $responseTimeout = max(1, (int) config('biometric-devices.retry.response_timeout', 60));
+        $maxAttempts = max(1, (int) config('biometric-devices.retry.max_attempts', 3));
+
+        $timedOutCommands = $commandModel::query()
+            ->where('status', DeviceCommandStatusEnum::SENT)
+            ->where('updated_at', '<=', now()->subSeconds($responseTimeout))
+            ->orderBy('id')
+            ->limit(100)
+            ->get();
+
+        foreach ($timedOutCommands as $command) {
+            $message = "Device response timeout after {$responseTimeout} seconds";
+
+            if ($command->error_count + 1 >= $maxAttempts) {
+                $command->markAsFailed($message);
+                Logger::warning('Command failed after response timeouts', [
+                    'command_id' => $command->id,
+                    'device_id' => $command->device_id,
+                    'command_name' => $command->command_name,
+                    'attempts' => $command->error_count,
+                ]);
+
+                continue;
+            }
+
+            $command->markForRetry($message);
+            Logger::warning('Timed-out command returned to pending queue', [
+                'command_id' => $command->id,
+                'device_id' => $command->device_id,
+                'command_name' => $command->command_name,
+                'attempts' => $command->error_count,
+            ]);
         }
     }
 
@@ -583,7 +874,7 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
     {
         $device = $command->device;
 
-        if ( ! $device) {
+        if (! $device) {
             return;
         }
 
@@ -618,40 +909,50 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
         }
     }
 
-    /** Handle disconnection */
-    protected function handleDisconnection($socket): void
+    /** Handle disconnection without marking a superseded device connection offline. */
+    protected function handleDisconnection($socket, string $reason = 'unknown', ?int $errorCode = null): void
     {
         $socketId = $this->getSocketId($socket);
-        $this->info("Client disconnected: {$socketId}");
+        $socketObjectId = spl_object_id($socket);
+        $serialNum = $this->socketToSerial[$socketId] ?? null;
 
-        // بروزرسانی وضعیت در دیتابیس و پخش Event
-        if (isset($this->socketToSerial[$socketId])) {
-            $serialNum = $this->socketToSerial[$socketId];
+        $this->warn("Client disconnected: socket={$socketId}, serial=".($serialNum ?? 'unknown').", reason={$reason}, error_code=".($errorCode ?? 'none'));
 
-            // ذخیره وضعیت آفلاین در دیتابیس
-            $this->markDeviceAsOffline($serialNum);
+        unset($this->socketToSerial[$socketId], $this->connectedDevices[$socketId]);
+        $shouldMarkOffline = $serialNum !== null && ! $this->hasActiveConnectionForSerial($serialNum);
 
-            // پخش Event - برای اطلاع‌رسانی و پردازش‌های اضافی
-            event(new DeviceDisconnected(
-                $serialNum,
-                now()
-            ));
-
-            $this->info("Device {$serialNum} disconnected");
-
-            unset($this->socketToSerial[$socketId], $this->connectedDevices[$socketId]);
+        try {
+            socket_close($socket);
+        } catch (Throwable) {
         }
 
-        socket_close($socket);
-
-        // حذف از لیست sockets و پاکسازی bufferها
         $this->sockets = array_filter($this->sockets, fn ($s) => $s !== $socket);
         unset(
             $this->handshakeComplete[$socketId],
             $this->messageBuffer[$socketId],
             $this->lastActivityTime[$socketId],
-            $this->awaitingPong[$socketId]
+            $this->awaitingPong[$socketId],
+            $this->fragmentedMessages[$socketId],
+            $this->fragmentedOpcodes[$socketId]
         );
+        unset($this->socketIds[$socketObjectId]);
+
+        if ($shouldMarkOffline) {
+            try {
+                $this->markDeviceAsOffline($serialNum);
+                event(new DeviceDisconnected($serialNum, now()));
+                $this->info("Device {$serialNum} disconnected");
+            } catch (Throwable $exception) {
+                $this->error("Failed to persist disconnection for {$serialNum}: {$exception->getMessage()}");
+            }
+        } elseif ($serialNum !== null) {
+            $this->info("Device {$serialNum} remains online through another active socket");
+        }
+    }
+
+    protected function hasActiveConnectionForSerial(string $serial): bool
+    {
+        return in_array($serial, $this->socketToSerial, true);
     }
 
     /** علامت‌گذاری دستگاه به عنوان آفلاین */
@@ -659,7 +960,7 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
     {
         $deviceModel = config('biometric-devices.models.device');
 
-        if ( ! class_exists($deviceModel)) {
+        if (! class_exists($deviceModel)) {
             return;
         }
 
@@ -674,6 +975,8 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
     /** Stop server */
     public function stop(): void
     {
+        $this->running = false;
+
         foreach ($this->sockets as $socket) {
             if ($socket !== $this->socket) {
                 socket_close($socket);
@@ -830,10 +1133,9 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
     /** Send raw command to device */
     public function sendRawCommand(string $deviceSerial, string $commandName, array $params): bool
     {
-        // پیدا کردن socket دستگاه
         $socketId = array_search($deviceSerial, $this->connectedDevices, true);
 
-        if ( ! $socketId) {
+        if ($socketId === false) {
             Logger::debug("Device not connected: {$deviceSerial}");
 
             return false;
@@ -849,21 +1151,31 @@ class WebSocketDeviceDriver extends AbstractDeviceDriver
             }
         }
 
-        if ( ! $socket) {
+        if (! $socket) {
             Logger::debug("Socket not found for device: {$deviceSerial}");
 
             return false;
         }
 
-        // ارسال پیام با استفاده از sendMessage که خودش encode می‌کنه
         try {
-            $this->sendMessage($socket, $params);
-        } catch (JsonException $e) {
+            $sent = $this->sendMessage($socket, $params);
+        } catch (Throwable $e) {
             Logger::error("Failed to send command to device: {$deviceSerial}", [
                 'command' => $commandName,
                 'params' => $params,
                 'error' => $e->getMessage(),
             ]);
+
+            return false;
+        }
+
+        if (! $sent) {
+            Logger::warning("Command write failed for device: {$deviceSerial}", [
+                'command' => $commandName,
+                'params' => $params,
+            ]);
+
+            return false;
         }
 
         Logger::debug("Command sent to device: {$deviceSerial}", [

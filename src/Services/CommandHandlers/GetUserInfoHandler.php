@@ -17,7 +17,7 @@ class GetUserInfoHandler extends BaseCommandHandler
 {
     public function handle(array $data, $connection): ?array
     {
-        if ( ! isset($data['enrollid'])) {
+        if (! isset($data['enrollid'])) {
             return null;
         }
 
@@ -31,13 +31,15 @@ class GetUserInfoHandler extends BaseCommandHandler
             'mapped' => $userDTO->toArray(),
         ]);
 
-        // بررسی وجود command مرتبط در دیتابیس
-        $hasCommand = $this->updateCommandStatus($serialNum, 'getuserinfo', true, $data);
+        // result:false یعنی دستگاه کاربر را پیدا نکرد (داده بیومتریک وجود ندارد)
+        $deviceFoundUser = ($data['result'] ?? false) === true;
 
-        // فقط در صورت وجود command، event ها را trigger کن
-        // دستگاه به صورت خودکار و دوره‌ای اطلاعات کاربران را می‌فرستد
-        // اما ما فقط وقتی نیاز داریم که واقعاً درخواست داده‌ایم
-        if ($hasCommand) {
+        // بررسی وجود command مرتبط در دیتابیس و بروزرسانی وضعیت آن
+        $hasCommand = $this->updateCommandStatus($serialNum, 'getuserinfo', $deviceFoundUser, $data);
+
+        // فقط در صورت وجود command و وقتی دستگاه واقعاً داده برگردانده، event فایر کن
+        // اگر result:false باشد (کاربر در دستگاه نیست)، event نباید فایر شود
+        if ($hasCommand && $deviceFoundUser) {
             // پخش Event - کاربر مسئول ذخیره
             event(new UserInfoReceived($userDTO));
 
@@ -50,6 +52,8 @@ class GetUserInfoHandler extends BaseCommandHandler
             ));
         }
 
+        // The protocol defines getuserinfo as a server request followed by one device response.
+        // Sending an extra ACK here can put some firmware versions into an invalid state.
         return null;
     }
 

@@ -36,6 +36,13 @@ return [
     'websocket' => [
         'host' => env('BIOMETRIC_WS_HOST', '0.0.0.0'),
         'port' => env('BIOMETRIC_WS_PORT', 7788),
+        'backlog' => env('BIOMETRIC_WS_BACKLOG', 128),
+        'read_chunk_bytes' => env('BIOMETRIC_WS_READ_CHUNK_BYTES', 64 * 1024),
+        'max_handshake_bytes' => env('BIOMETRIC_WS_MAX_HANDSHAKE_BYTES', 16 * 1024),
+        'max_payload_bytes' => env('BIOMETRIC_WS_MAX_PAYLOAD_BYTES', 4 * 1024 * 1024),
+        'max_buffer_bytes' => env('BIOMETRIC_WS_MAX_BUFFER_BYTES', 8 * 1024 * 1024),
+        'write_timeout_ms' => env('BIOMETRIC_WS_WRITE_TIMEOUT_MS', 1000),
+        'slow_handler_threshold_ms' => env('BIOMETRIC_WS_SLOW_HANDLER_THRESHOLD_MS', 500),
     ],
 
     /*
@@ -105,6 +112,11 @@ return [
         'queue' => env('BIOMETRIC_QUEUE_NAME', 'biometric-commands'),
     ],
 
+    'retry' => [
+        'max_attempts' => env('BIOMETRIC_COMMAND_MAX_ATTEMPTS', 3),
+        'response_timeout' => env('BIOMETRIC_COMMAND_RESPONSE_TIMEOUT', 60),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Periodic Tasks
@@ -112,8 +124,11 @@ return [
     */
 
     'tasks' => [
-        'ping_interval' => 15, // seconds
-        'command_check_interval' => 1, // seconds
+        'ping_interval' => env('BIOMETRIC_WS_PING_INTERVAL', 15),
+        'ping_timeout' => env('BIOMETRIC_WS_PING_TIMEOUT', 60),
+        'registration_timeout' => env('BIOMETRIC_WS_REGISTRATION_TIMEOUT', 30),
+        'command_check_interval' => env('BIOMETRIC_COMMAND_CHECK_INTERVAL', 1),
+        'command_batch_size' => env('BIOMETRIC_COMMAND_BATCH_SIZE', 10),
     ],
 
     /*

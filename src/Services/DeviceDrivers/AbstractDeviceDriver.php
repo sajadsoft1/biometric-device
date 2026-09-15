@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Sajadsoft\BiometricDevices\Services\DeviceDrivers;
 
 use Illuminate\Console\Command;
-use Log;
 use Sajadsoft\BiometricDevices\Contracts\DeviceDriverInterface;
 use Sajadsoft\BiometricDevices\Services\Pipelines\MessagePipeline;
 use Sajadsoft\BiometricDevices\Support\Logger;
@@ -38,10 +37,7 @@ abstract class AbstractDeviceDriver implements DeviceDriverInterface
         // نمایش در console (برای دیدن در ترمینال)
         $this->console?->info($message);
 
-        // لاگ فقط اگر console نداشتیم (مثلاً در background)
-        if ( ! $this->console) {
-            Logger::info($message);
-        }
+        Logger::info($message);
     }
 
     /** Output warning message */
@@ -50,10 +46,7 @@ abstract class AbstractDeviceDriver implements DeviceDriverInterface
         // نمایش در console (برای دیدن در ترمینال)
         $this->console?->warn($message);
 
-        // لاگ فقط اگر console نداشتیم یا برای warning ها
-        if ( ! $this->console) {
-            Logger::warning($message);
-        }
+        Logger::warning($message);
     }
 
     /** Output error message */
@@ -82,13 +75,16 @@ abstract class AbstractDeviceDriver implements DeviceDriverInterface
             'device_serial' => $deviceSerial,
         ];
 
-        Log::debug('THE CONTEXT', $context);
+        Logger::debug('Message received', [
+            'device_serial' => $deviceSerial,
+            'data' => $data,
+        ]);
 
         // پردازش از طریق pipeline
         return $this->pipeline->process($context, function ($context) {
             $handler = $context['handler'] ?? null;
 
-            if ( ! $handler) {
+            if (! $handler) {
                 return;
             }
 

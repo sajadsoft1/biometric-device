@@ -110,17 +110,11 @@ class DeviceCommand extends Model
     /** Mark command as successful */
     public function markAsSuccess(?array $responseData = null): bool
     {
-        try {
-            return $this->update([
-                'status' => DeviceCommandStatusEnum::SUCCESS,
-                'executed_at' => now(),
-                'response' => $responseData ? json_encode(array_diff_key($responseData, array_flip(['record', 'secret'])), JSON_THROW_ON_ERROR) : null,
-            ]);
-        } catch (JsonException $e) {
-            Logger::error("Failed to encode response data for DeviceCommand ID {$this->id}: " . $e->getMessage());
-
-            return false;
-        }
+        return $this->update([
+            'status' => DeviceCommandStatusEnum::SUCCESS,
+            'executed_at' => now(),
+            'response' => $this->encodeResponse($responseData),
+        ]);
     }
 
     /** Mark command as failed */
@@ -131,7 +125,7 @@ class DeviceCommand extends Model
             'error_count' => $this->error_count + 1,
             'error_message' => $errorMessage,
             'executed_at' => now(),
-            'response' => $responseData ? json_encode($responseData) : null,
+            'response' => $this->encodeResponse($responseData),
         ]);
     }
 
@@ -143,11 +137,39 @@ class DeviceCommand extends Model
         ]);
     }
 
+    /** Return a timed-out command to the pending queue. */
+    public function markForRetry(string $errorMessage): bool
+    {
+        return $this->update([
+            'status' => DeviceCommandStatusEnum::PENDING,
+            'send_status' => false,
+            'error_count' => $this->error_count + 1,
+            'error_message' => $errorMessage,
+        ]);
+    }
+
     /** Check if max retry attempts exceeded */
     public function hasExceededMaxRetries(): bool
     {
         $maxAttempts = config('biometric-devices.retry.max_attempts', 3);
 
         return $this->error_count >= $maxAttempts;
+    }
+
+    private function encodeResponse(?array $responseData): ?string
+    {
+        if ($responseData === null) {
+            return null;
+        }
+
+        try {
+            return json_encode(Logger::sanitize($responseData), JSON_THROW_ON_ERROR);
+        } catch (JsonException $exception) {
+            Logger::error("Failed to encode response data for DeviceCommand ID {$this->id}", [
+                'error' => $exception->getMessage(),
+            ]);
+
+            return null;
+        }
     }
 }

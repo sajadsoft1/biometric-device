@@ -32,19 +32,19 @@ class CheckRegStatusHandler extends BaseCommandHandler
      *     backupnum?: int,
      *     cancel?: bool,
      * }            $data       پاسخ دستگاه
-     * @param mixed $connection اتصال فعال
-     *
+     * @param  mixed  $connection  اتصال فعال
      * @return array{
      *     ret: string,
      *     result: bool,
      * }|null پاسخ برای دستگاه (null = بدون پاسخ)
+     *
      * @throws JsonException
      */
     public function handle(array $data, $connection): ?array
     {
         $serialNum = $this->getDeviceSerial($data);
 
-        if ( ! $serialNum) {
+        if (! $serialNum) {
             return null;
         }
 
@@ -69,6 +69,13 @@ class CheckRegStatusHandler extends BaseCommandHandler
             'status' => $statusDTO->getStatusLabel(),
             'is_cancelled' => $statusDTO->isCancelled,
         ]);
+
+        $this->updateCommandStatus(
+            $serialNum,
+            'checkregstatus',
+            (bool) ($data['result'] ?? true),
+            $data
+        );
 
         // پخش Event - برای نمایش real-time به کاربر
         event(new RegistrationStatusReceived($statusDTO));
