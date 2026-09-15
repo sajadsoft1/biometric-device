@@ -16,8 +16,11 @@ class RouteToHandlerPipe
         $command = $context['command'];
 
         if ($command) {
-            // دریافت handler class
-            $handlerClass = $command->getHandlerClass();
+            // برنامه می‌تواند Handler پیش‌فرض هر فرمان را جایگزین کند.
+            $handlerClass = config(
+                "biometric-devices.handlers.{$command->value}",
+                $command->getHandlerClass()
+            );
             $context['handler'] = app($handlerClass);
         } else {
             $context['handler'] = null;

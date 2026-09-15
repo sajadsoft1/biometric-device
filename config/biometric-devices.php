@@ -87,6 +87,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Custom Command Handlers
+    |--------------------------------------------------------------------------
+    |
+    | Replace a handler for a device command in your application. The array key
+    | is the command sent by the device, for example "sendqrcode".
+    |
+    */
+
+    'handlers' => [
+        // 'sendqrcode' => \App\Biometric\Handlers\AuthorizeQrCodeHandler::class,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Logging Configuration
     |--------------------------------------------------------------------------
     */

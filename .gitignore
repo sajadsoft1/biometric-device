@@ -3,6 +3,7 @@ composer.lock
 .phpunit.result.cache
 .php-cs-fixer.cache
 .phpunit.cache
+.codebase-memory/
 .idea/
 .vscode/
 *.log

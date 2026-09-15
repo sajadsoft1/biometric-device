@@ -58,7 +58,6 @@ class SendQrCodeHandler extends BaseCommandHandler
             qrCodeData: $qrCodeContent,
             deviceSerial: $serialNum,
             timestamp: isset($data['time']) ? $this->parseTimestamp($data['time']) : Carbon::now(),
-            employeeId: isset($data['enrollid']) ? (int) $data['enrollid'] : null,
             rawData: $data
         );
 
@@ -74,7 +73,7 @@ class SendQrCodeHandler extends BaseCommandHandler
         // طبق مستندات API باید شامل: access, enrollid, username, message, voice باشد
         return $this->buildResponse('sendqrcode', true, [
             'access' => 0, // پیش‌فرض: دسترسی نداره (Custom Handler باید تغییر بده)
-            'enrollid' => $qrCodeDTO->employeeId,
+            'enrollid' => isset($data['enrollid']) ? (int) $data['enrollid'] : null,
             'message' => 'QR code received',
             'voice' => 'QR code received',
         ]);
