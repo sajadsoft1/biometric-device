@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Sajadsoft\BiometricDevices\Tests\Unit;
 
+use LogicException;
+use Sajadsoft\BiometricDevices\Contracts\CommandHandlerInterface;
 use Sajadsoft\BiometricDevices\DTOs\Responses\QrCodeDTO;
 use Sajadsoft\BiometricDevices\Enums\DeviceCommand;
 use Sajadsoft\BiometricDevices\Events\QrCodeReceived;
@@ -60,6 +62,28 @@ class QrCodeHandlerTest extends TestCase
         self::assertInstanceOf(AllowQrCodeHandler::class, $context['handler']);
         self::assertSame(['ret' => 'sendqrcode', 'result' => true, 'access' => 1], $context['handler']->handle([], null));
     }
+
+    public function test_an_application_can_replace_any_known_operational_handler(): void
+    {
+        config()->set('biometric-devices.handlers.sendlog', CustomOperationalHandler::class);
+
+        $context = (new RouteToHandlerPipe)->handle([
+            'command' => DeviceCommand::SEND_LOG,
+        ], static fn (array $context): array => $context);
+
+        self::assertInstanceOf(CustomOperationalHandler::class, $context['handler']);
+        self::assertSame('sendlog', $context['handler']->getCommandName());
+    }
+
+    public function test_a_custom_handler_must_implement_the_package_contract(): void
+    {
+        config()->set('biometric-devices.handlers.sendlog', \stdClass::class);
+        $this->expectException(LogicException::class);
+
+        (new RouteToHandlerPipe)->handle([
+            'command' => DeviceCommand::SEND_LOG,
+        ], static fn (array $context): array => $context);
+    }
 }
 
 class AllowQrCodeHandler extends SendQrCodeHandler
@@ -72,5 +96,18 @@ class AllowQrCodeHandler extends SendQrCodeHandler
     public function handle(array $data, $connection): ?array
     {
         return ['ret' => 'sendqrcode', 'result' => true, 'access' => 1];
+    }
+}
+
+class CustomOperationalHandler implements CommandHandlerInterface
+{
+    public function handle(array $data, $connection): ?array
+    {
+        return null;
+    }
+
+    public function getCommandName(): string
+    {
+        return 'sendlog';
     }
 }

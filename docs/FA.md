@@ -158,6 +158,31 @@ class AuthorizeQrCodeHandler extends SendQrCodeHandler
 
 پس از تغییر تنظیمات کش‌شده، `php artisan config:clear` را اجرا کنید. این روش فقط منطق QR برنامهٔ شما را تغییر می‌دهد و به کد پکیج دست نمی‌زند؛ بنابراین به‌روزرسانی پکیج ساده و کم‌خطر می‌ماند.
 
+## جایگزینی همهٔ Handlerهای عملیاتی
+
+کلیدهای `biometric-devices.handlers` برای همهٔ فرمان‌های شناخته‌شده بررسی می‌شوند، نه فقط QR. بنابراین می‌توانید کلاس موردنظر برنامهٔ خود را برای هر فرمان عملیاتی تعیین کنید. کلاس جایگزین باید `CommandHandlerInterface` (قرارداد دو متد `handle` و `getCommandName`) را پیاده‌سازی کند؛ در غیر این صورت پکیج با خطای شفاف متوقف می‌شود.
+
+| کلید تنظیمات | کاربرد |
+| --- | --- |
+| `reg` | ثبت دستگاه |
+| `sendlog` | دریافت تردد |
+| `sendqrcode` | اسکن QR یا بارکد |
+| `senduser` | دریافت کاربر از دستگاه |
+| `getuserlist` / `getuserinfo` | پاسخ فهرست یا اطلاعات کاربر |
+| `checkregstatus` | وضعیت ثبت اثر انگشت یا دادهٔ بایومتریک |
+| سایر نام‌های موجود در `DeviceCommand` | هر فرمان پشتیبانی‌شدهٔ دیگر |
+
+نمونهٔ جایگزینی Handler تردد:
+
+```php
+'handlers' => [
+    'sendlog' => App\Biometric\Handlers\StoreAttendanceHandler::class,
+    'sendqrcode' => App\Biometric\Handlers\AuthorizeQrCodeHandler::class,
+],
+```
+
+برای حفظ رفتار پیش‌فرض، کلید آن فرمان را از آرایه حذف کنید. پس از هر تغییر در تنظیمات کش‌شده، `php artisan config:clear` را اجرا کنید.
+
 ## افزودن پشتیبانی از برند یا پروتکل جدید
 
 برای تفاوت در قالب پیام‌های دستگاه، یک Mapper بسازید که `DataMapperInterface` را پیاده‌سازی کند یا `AIFaceWebSocketMapper` را گسترش دهد. سپس آن را در بخش `custom_mappers` تنظیمات معرفی کنید. Mapper مسئول تبدیل قالب اختصاصی دستگاه به DTOهای پکیج و برعکس است؛ منطق کسب‌وکار مثل ثبت تردد یا مجوز ورود باید در Listener یا Handler برنامه بماند.

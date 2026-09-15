@@ -90,13 +90,20 @@ return [
     | Custom Command Handlers
     |--------------------------------------------------------------------------
     |
-    | Replace a handler for a device command in your application. The array key
-    | is the command sent by the device, for example "sendqrcode".
+    | Replace a handler for any supported device command in your application.
+    | The array key is the exact command name sent by the device. Every custom
+    | class must implement CommandHandlerInterface.
     |
     */
 
     'handlers' => [
+        // 'reg' => \App\Biometric\Handlers\RegisterDeviceHandler::class,
+        // 'sendlog' => \App\Biometric\Handlers\StoreAttendanceHandler::class,
         // 'sendqrcode' => \App\Biometric\Handlers\AuthorizeQrCodeHandler::class,
+        // 'senduser' => \App\Biometric\Handlers\SyncUserHandler::class,
+        // 'getuserlist' => \App\Biometric\Handlers\GetUserListHandler::class,
+        // 'getuserinfo' => \App\Biometric\Handlers\GetUserInfoHandler::class,
+        // 'checkregstatus' => \App\Biometric\Handlers\RegistrationStatusHandler::class,
     ],
 
     /*
