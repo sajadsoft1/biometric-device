@@ -24,6 +24,7 @@ use Sajadsoft\BiometricDevices\Services\CommandHandlers\SetDeviceLockHandler;
 use Sajadsoft\BiometricDevices\Services\CommandHandlers\SetTimeHandler;
 use Sajadsoft\BiometricDevices\Services\CommandHandlers\SetUserInfoHandler;
 use Sajadsoft\BiometricDevices\Services\CommandHandlers\SetUserLockHandler;
+use Sajadsoft\BiometricDevices\Services\CommandHandlers\ResultResponseHandler;
 use Sajadsoft\BiometricDevices\Services\CommandHandlers\SetUsernameHandler;
 
 enum DeviceCommand: string
@@ -37,8 +38,13 @@ enum DeviceCommand: string
     case SET_USER_INFO = 'setuserinfo';
     case SEND_USER = 'senduser';
     case DELETE_USER = 'deleteuser';
+    case GET_USER_NAME = 'getusername';
     case SET_USER_NAME = 'setusername';
+    case ENABLE_USER = 'enableuser';
+    case CLEAN_USER = 'cleanuser';
     case CLEAN_ADMIN = 'cleanadmin';
+    case GET_USER_PROFILE = 'getuserprofile';
+    case SET_USER_PROFILE = 'setuserprofile';
     case ENROLL_FINGERPRINT = 'adduser';
 
     // Attendance Logs
@@ -51,14 +57,24 @@ enum DeviceCommand: string
     case OPEN_DOOR = 'opendoor';
     case REBOOT = 'reboot';
     case GET_DEVICE_INFO = 'getdevinfo';
+    case SET_DEVICE_INFO = 'setdevinfo';
     case INIT_SYSTEM = 'initsys';
     case SET_TIME = 'settime';
+    case GET_TIME = 'gettime';
 
     // Access Control
     case GET_DEVICE_LOCK = 'getdevlock';
     case SET_DEVICE_LOCK = 'setdevlock';
     case GET_USER_LOCK = 'getuserlock';
     case SET_USER_LOCK = 'setuserlock';
+    case DELETE_USER_LOCK = 'deleteuserlock';
+    case CLEAN_USER_LOCK = 'cleanuserlock';
+
+    // Questionnaire and holiday calendar
+    case GET_QUESTIONNAIRE = 'getquestionnaire';
+    case SET_QUESTIONNAIRE = 'setquestionnaire';
+    case GET_HOLIDAY = 'getholiday';
+    case SET_HOLIDAY = 'setholiday';
 
     // Other
     case SEND_QR_CODE = 'sendqrcode';
@@ -85,8 +101,23 @@ enum DeviceCommand: string
             self::GET_DEVICE_INFO => GetDeviceInfoHandler::class,
             self::SET_DEVICE_LOCK => SetDeviceLockHandler::class,
             self::SET_USER_LOCK => SetUserLockHandler::class,
+            self::GET_USER_NAME => ResultResponseHandler::class,
             self::SET_USER_NAME => SetUsernameHandler::class,
+            self::ENABLE_USER => ResultResponseHandler::class,
+            self::CLEAN_USER => ResultResponseHandler::class,
             self::CLEAN_ADMIN => CleanAdminHandler::class,
+            self::GET_USER_PROFILE => ResultResponseHandler::class,
+            self::SET_USER_PROFILE => ResultResponseHandler::class,
+            self::SET_DEVICE_INFO => ResultResponseHandler::class,
+            self::GET_TIME => ResultResponseHandler::class,
+            self::GET_DEVICE_LOCK => ResultResponseHandler::class,
+            self::GET_USER_LOCK => ResultResponseHandler::class,
+            self::DELETE_USER_LOCK => ResultResponseHandler::class,
+            self::CLEAN_USER_LOCK => ResultResponseHandler::class,
+            self::GET_QUESTIONNAIRE => ResultResponseHandler::class,
+            self::SET_QUESTIONNAIRE => ResultResponseHandler::class,
+            self::GET_HOLIDAY => ResultResponseHandler::class,
+            self::SET_HOLIDAY => ResultResponseHandler::class,
             self::SET_TIME => SetTimeHandler::class,
             self::CHECK_REG_STATUS => CheckRegStatusHandler::class,
             self::ENROLL_FINGERPRINT => AddUserHandler::class,
@@ -124,8 +155,23 @@ enum DeviceCommand: string
             self::SET_USER_INFO => 'تنظیم اطلاعات کاربر',
             self::SEND_USER => 'ارسال اطلاعات کاربر',
             self::DELETE_USER => 'حذف کاربر',
+            self::GET_USER_NAME => 'دریافت نام کاربر',
             self::SET_USER_NAME => 'تنظیم نام کاربران',
+            self::ENABLE_USER => 'فعال یا غیرفعال کردن کاربر',
+            self::CLEAN_USER => 'پاک کردن تمام کاربران',
             self::CLEAN_ADMIN => 'پاک کردن تمام ادمین‌ها',
+            self::GET_USER_PROFILE => 'دریافت پروفایل کاربر',
+            self::SET_USER_PROFILE => 'تنظیم پروفایل کاربر',
+            self::SET_DEVICE_INFO => 'تنظیم پارامتر دستگاه',
+            self::GET_TIME => 'دریافت زمان دستگاه',
+            self::GET_DEVICE_LOCK => 'دریافت پارامتر دسترسی',
+            self::GET_USER_LOCK => 'دریافت دسترسی کاربر',
+            self::DELETE_USER_LOCK => 'حذف دسترسی کاربر',
+            self::CLEAN_USER_LOCK => 'پاک کردن دسترسی همه کاربران',
+            self::GET_QUESTIONNAIRE => 'دریافت پرسشنامه',
+            self::SET_QUESTIONNAIRE => 'تنظیم پرسشنامه',
+            self::GET_HOLIDAY => 'دریافت تعطیلات',
+            self::SET_HOLIDAY => 'تنظیم تعطیلات',
             self::SEND_LOG => 'ارسال لاگ حضور',
             self::SEND_QR_CODE => 'ارسال QR Code',
             self::GET_ALL_LOG => 'دریافت تمام لاگ‌ها',

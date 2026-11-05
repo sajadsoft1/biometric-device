@@ -315,6 +315,7 @@ class AIFaceWebSocketMapper extends AbstractDataMapper
                 [
                     'enrollid' => $dto->employeeId,
                     'weekzone' => $dto->weekZone,
+                    ...$this->optionalWeekZones($dto),
                     'group' => $dto->group,
                     'starttime' => $dto->startDate->format('Y-m-d') . ' 00:00:00',
                     'endtime' => $dto->endDate->format('Y-m-d') . ' 00:00:00',
@@ -335,10 +336,37 @@ class AIFaceWebSocketMapper extends AbstractDataMapper
 
     public function mapGetLogsCommand(GetLogsDTO $dto, string $commandName): array
     {
-        return [
+        $command = [
             'cmd' => $commandName, // 'getalllog' or 'getnewlog'
             'stn' => $dto->startFromBeginning ? 1 : 0,
         ];
+
+        if ($commandName === 'getalllog' && $dto->from !== null && $dto->to !== null) {
+            $command['from'] = $dto->from;
+            $command['to'] = $dto->to;
+        }
+
+        return $command;
+    }
+
+    /** @return array<string, int> */
+    private function optionalWeekZones(SetUserAccessDTO $dto): array
+    {
+        $zones = [];
+
+        if ($dto->weekZone2 !== null) {
+            $zones['weekzone2'] = $dto->weekZone2;
+        }
+
+        if ($dto->weekZone3 !== null) {
+            $zones['weekzone3'] = $dto->weekZone3;
+        }
+
+        if ($dto->weekZone4 !== null) {
+            $zones['weekzone4'] = $dto->weekZone4;
+        }
+
+        return $zones;
     }
 
     /** Parse timestamp from various formats */

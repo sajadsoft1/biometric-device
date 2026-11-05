@@ -7,11 +7,17 @@ namespace Sajadsoft\BiometricDevices;
 use Illuminate\Contracts\Foundation\Application;
 use JsonException;
 use Sajadsoft\BiometricDevices\Contracts\DataMapperInterface;
+use InvalidArgumentException;
 use Sajadsoft\BiometricDevices\DTOs\Commands\AddUserDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\EnrollFingerprintDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\GetUserInfoDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\OpenLockDTO;
+use Sajadsoft\BiometricDevices\DTOs\Commands\SetAccessParameterDTO;
+use Sajadsoft\BiometricDevices\DTOs\Commands\SetDeviceInfoDTO;
+use Sajadsoft\BiometricDevices\DTOs\Commands\SetHolidayDTO;
+use Sajadsoft\BiometricDevices\DTOs\Commands\SetQuestionnaireDTO;
 use Sajadsoft\BiometricDevices\DTOs\Commands\SetUserAccessDTO;
+use Sajadsoft\BiometricDevices\DTOs\Commands\SetUserProfileDTO;
 use Sajadsoft\BiometricDevices\Enums\BiometricType;
 use Sajadsoft\BiometricDevices\Enums\DeviceCommandStatusEnum;
 use Sajadsoft\BiometricDevices\Events\CommandSent;
@@ -190,6 +196,66 @@ class BiometricDeviceManager
     }
 
     /**
+     * دریافت نام یک کاربر
+     */
+    public function getUsername(string $deviceSerial, int $employeeId): void
+    {
+        $this->sendRawCommand($deviceSerial, 'getusername', [
+            'cmd' => 'getusername',
+            'enrollid' => $this->employeeId($employeeId),
+        ]);
+    }
+
+    /**
+     * فعال یا غیرفعال کردن کاربر. enflag برابر ۱ فعال و برابر ۰ غیرفعال است.
+     */
+    public function enableUser(string $deviceSerial, int $employeeId, bool $enabled = true): void
+    {
+        $this->sendRawCommand($deviceSerial, 'enableuser', [
+            'cmd' => 'enableuser',
+            'enrollid' => $this->employeeId($employeeId),
+            'enflag' => $enabled ? 1 : 0,
+        ]);
+    }
+
+    /**
+     * غیرفعال کردن کاربر
+     */
+    public function disableUser(string $deviceSerial, int $employeeId): void
+    {
+        $this->enableUser($deviceSerial, $employeeId, false);
+    }
+
+    /**
+     * پاک کردن تمام کاربران دستگاه
+     *
+     * ⚠️ کاربران و داده‌های بیومتریک آن‌ها از دستگاه حذف می‌شوند
+     */
+    public function cleanUsers(string $deviceSerial): void
+    {
+        $this->sendRawCommand($deviceSerial, 'cleanuser', ['cmd' => 'cleanuser']);
+    }
+
+    /**
+     * تنظیم متن پروفایل کاربر. enrollid صفر اطلاعات عمومی است.
+     */
+    public function setUserProfile(string $deviceSerial, SetUserProfileDTO $dto): void
+    {
+        $this->sendRawCommand($deviceSerial, 'setuserprofile', $dto->toDevicePayload(), $dto);
+    }
+
+    /**
+     * دریافت متن پروفایل کاربر
+     */
+    public function getUserProfile(string $deviceSerial, int $employeeId): void
+    {
+        $this->sendRawCommand($deviceSerial, 'getuserprofile', [
+            'cmd' => 'getuserprofile',
+            'enrollid' => $this->employeeId($employeeId),
+        ]);
+    }
+
+    /**
      * Clean all admin users from device
      *
      * ⚠️ این دستور خطرناک است و تمام کاربران با سطح دسترسی Admin را حذف می‌کند
@@ -232,6 +298,22 @@ class BiometricDeviceManager
     public function getDeviceInfo(string $deviceSerial): void
     {
         $this->sendRawCommand($deviceSerial, 'getdevinfo', ['cmd' => 'getdevinfo']);
+    }
+
+    /**
+     * تنظیم پارامترهای عمومی دستگاه. فقط فیلدهای پر شده ارسال می‌شوند.
+     */
+    public function setDeviceInfo(string $deviceSerial, SetDeviceInfoDTO $dto): void
+    {
+        $this->sendRawCommand($deviceSerial, 'setdevinfo', $dto->toDevicePayload(), $dto);
+    }
+
+    /**
+     * دریافت ساعت فعلی دستگاه
+     */
+    public function getTime(string $deviceSerial): void
+    {
+        $this->sendRawCommand($deviceSerial, 'gettime', ['cmd' => 'gettime']);
     }
 
     /**
@@ -314,6 +396,90 @@ class BiometricDeviceManager
         $this->sendRawCommand($deviceSerial, 'setdevlock', $command, $dto);
     }
 
+    /**
+     * دریافت پارامتر دسترسی دستگاه: زون‌ها، گروه قفل و تأخیر درب
+     */
+    public function getAccessParameter(string $deviceSerial): void
+    {
+        $this->sendRawCommand($deviceSerial, 'getdevlock', ['cmd' => 'getdevlock']);
+    }
+
+    /**
+     * تنظیم پارامتر دسترسی دستگاه با ساختار dayzone و weekzone و lockgroup
+     */
+    public function setAccessParameter(string $deviceSerial, SetAccessParameterDTO $dto): void
+    {
+        $this->sendRawCommand($deviceSerial, 'setdevlock', $dto->toDevicePayload(), $dto);
+    }
+
+    /**
+     * دریافت پارامتر دسترسی یک کاربر
+     */
+    public function getUserAccess(string $deviceSerial, int $employeeId): void
+    {
+        $this->sendRawCommand($deviceSerial, 'getuserlock', [
+            'cmd' => 'getuserlock',
+            'enrollid' => $this->employeeId($employeeId),
+        ]);
+    }
+
+    /**
+     * حذف پارامتر دسترسی یک کاربر
+     */
+    public function deleteUserAccess(string $deviceSerial, int $employeeId): void
+    {
+        $this->sendRawCommand($deviceSerial, 'deleteuserlock', [
+            'cmd' => 'deleteuserlock',
+            'enrollid' => $this->employeeId($employeeId),
+        ]);
+    }
+
+    /**
+     * پاک کردن پارامتر دسترسی همه کاربران
+     */
+    public function cleanUserAccess(string $deviceSerial): void
+    {
+        $this->sendRawCommand($deviceSerial, 'cleanuserlock', ['cmd' => 'cleanuserlock']);
+    }
+
+    /**
+     * دریافت پرسشنامه دستگاه
+     */
+    public function getQuestionnaire(string $deviceSerial): void
+    {
+        $this->sendRawCommand($deviceSerial, 'getquestionnaire', [
+            'cmd' => 'getquestionnaire',
+            'stn' => true,
+        ]);
+    }
+
+    /**
+     * تنظیم پرسشنامه دستگاه
+     */
+    public function setQuestionnaire(string $deviceSerial, SetQuestionnaireDTO $dto): void
+    {
+        $this->sendRawCommand($deviceSerial, 'setquestionnaire', $dto->toDevicePayload(), $dto);
+    }
+
+    /**
+     * دریافت تقویم تعطیلات
+     */
+    public function getHoliday(string $deviceSerial): void
+    {
+        $this->sendRawCommand($deviceSerial, 'getholiday', [
+            'cmd' => 'getholiday',
+            'stn' => true,
+        ]);
+    }
+
+    /**
+     * تنظیم تقویم تعطیلات
+     */
+    public function setHoliday(string $deviceSerial, SetHolidayDTO $dto): void
+    {
+        $this->sendRawCommand($deviceSerial, 'setholiday', $dto->toDevicePayload(), $dto);
+    }
+
     // ============================================
     // Attendance Logs
     // ============================================
@@ -324,11 +490,13 @@ class BiometricDeviceManager
      * @param string $deviceSerial       شماره سریال دستگاه
      * @param bool   $startFromBeginning شروع از ابتدا یا ادامه لیست قبلی
      */
-    public function getAllLogs(string $deviceSerial, bool $startFromBeginning = true): void
+    public function getAllLogs(string $deviceSerial, bool $startFromBeginning = true, ?string $from = null, ?string $to = null): void
     {
         $dto = new DTOs\Commands\GetLogsDTO(
             startFromBeginning: $startFromBeginning,
-            newLogsOnly: false
+            newLogsOnly: false,
+            from: $from,
+            to: $to,
         );
 
         $command = $this->mapper->mapGetLogsCommand($dto, 'getalllog');
@@ -456,5 +624,14 @@ class BiometricDeviceManager
         $command = $this->mapper->mapOpenLockCommand($dto);
         
         $this->sendRawCommand($deviceSerial, 'openLock', $command, $dto);
+    }
+
+    private function employeeId(int $employeeId): int
+    {
+        if ($employeeId < 0) {
+            throw new InvalidArgumentException('enrollid must be greater than or equal to 0.');
+        }
+
+        return $employeeId;
     }
 }

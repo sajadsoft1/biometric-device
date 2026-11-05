@@ -2,7 +2,7 @@
     "name": "sajadsoft1/biometric-device",
     "description": "Event-driven Laravel package for biometric device communication with DTO support. Supports WebSocket, TCP, and other protocols for attendance and access control systems.",
     "type": "library",
-    "version": "13.0.1",
+    "version": "13.1.0",
     "license": "MIT",
     "keywords": [
         "laravel",
